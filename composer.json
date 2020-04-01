@@ -1,0 +1,52 @@
+{
+    "name": "morbihanet/laravel-modeler",
+    "description": "Dynamic models for Laravel 5.8 and up",
+    "keywords": [
+        "morbihanet",
+        "laravel",
+        "databse",
+        "model",
+        "dynamic"
+    ],
+    "homepage": "https://github.com/morbihanet/laravel-modeler",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Gérald Plusquellec",
+            "email": "contact@morbihanet.com",
+            "homepage": "http://www.morbihanet.com",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php" : "^7.4",
+        "laravel/framework": "^5.8|^6.0|^7.0"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^3.8|^4.0|^5.0",
+        "phpunit/phpunit": "^8.0",
+        "predis/predis": "^1.1"
+    },
+    "autoload": {
+        "psr-4": {
+            "Morbihanet\\Modeler\\": "src"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Morbihanet\\Modeler\\Test\\": "tests"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Morbihanet\\Mpdeler\\MpdelerServiceProvider"
+            ]
+        }
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}

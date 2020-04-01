@@ -1,0 +1,64 @@
+version: '3.1'
+services:
+    app:
+        build: .
+        volumes:
+            - .:/var/www
+            - ../:/home/app
+        ports:
+            - "8282:80"
+        links:
+            - mysql
+            - redis
+        environment:
+            - DB_HOST=mysql
+            - DB_USERNAME=morbihanet
+            - DB_DATABASE=morbihanet
+            - DB_PASSWORD=morbihanet
+            - APP_ENV=local
+            - APP_NAME=morbihanet
+            - REDIS_HOST=redis
+            - APP_KEY=base64:q3nnuVXT5RBdSd9DbvPOpG8QFOEq3m0/Xg2da6jKJEk=
+            - APP_DEBUG=true
+            - BROADCAST_DRIVER=log
+            - CACHE_DRIVER=file
+            - SESSION_DRIVER=file
+            - SESSION_LIFETIME=120
+            - QUEUE_DRIVER=redis
+            - QUEUE_CONNECTION=redis
+            - QUEUE_NAME=default
+            - REDIS_PASSWORD=null
+            - REDIS_PORT=6379
+            - PROXY_SCHEME=https
+
+    mysql:
+        image: mysql:8
+        restart: always
+        volumes:
+            - ~/data/morbihanet/mysql:/var/lib/mysql
+        environment:
+            - MYSQL_ROOT_PASSWORD=morbihanet
+            - MYSQL_ALLOW_EMPTY_PASSWORD=yes
+            - MYSQL_DATABASE=morbihanet
+            - MYSQL_USER=morbihanet
+            - MYSQL_PASSWORD=morbihanet
+        ports:
+            - "8236:3306"
+
+    phpmyadmin:
+        image: phpmyadmin/phpmyadmin
+        links:
+            - mysql
+        environment:
+            PMA_HOST: mysql
+            PMA_PORT: 3306
+        ports:
+            - '8283:80'
+
+    redis:
+        image: redislabs/redisearch:latest
+        command: redis-server --appendonly yes --loadmodule /usr/lib/redis/modules/redisearch.so
+        ports:
+            - "1793:6379"
+        volumes:
+            - ~/data/morbihanet/redis:/data
