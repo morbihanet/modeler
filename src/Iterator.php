@@ -230,7 +230,7 @@ class Iterator implements IteratorAggregate
 
     protected function withSelect($row)
     {
-        if (!$this->model instanceof Db) {
+        if ($this->model instanceof Db) {
             return $this->model->withSelect($row);
         }
 
@@ -738,11 +738,41 @@ class Iterator implements IteratorAggregate
     /**
      * @param string $field
      * @param $value
+     * @return $this|Iterator
+     */
+    public function likeI(string $field, $value)
+    {
+        return $this->where($field, 'like i', $value);
+    }
+
+    /**
+     * @param string $field
+     * @param $value
      * @return Iterator
      */
-    public function orNotContains(string $field, $value)
+    public function orLikeI(string $field, $value)
     {
-        return $this->orWhere($field, 'not like i', "%$value%");
+        return $this->orWhere($field, 'like i', $value);
+    }
+
+    /**
+     * @param string $field
+     * @param $value
+     * @return $this|Iterator
+     */
+    public function notLikeI(string $field, $value)
+    {
+        return $this->where($field, 'not like i', $value);
+    }
+
+    /**
+     * @param string $field
+     * @param $value
+     * @return Iterator
+     */
+    public function orNotLikeI(string $field, $value)
+    {
+        return $this->orWhere($field, 'not like i', $value);
     }
 
     /**

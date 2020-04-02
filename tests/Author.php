@@ -2,6 +2,6 @@
 
 namespace Morbihanet\Modeler\Test;
 
-use Morbihanet\Modeler\Model;
+use Morbihanet\Modeler\Modeler;
 
-class Author extends Model {}
+class Author extends Modeler {}

@@ -10,6 +10,11 @@ class Item extends Record
 
     public function __construct(Db $db, array $options = [])
     {
+//        if (isset($options['__db'])) {
+//            dd($options['__db']);
+//            Core::set();
+//        }
+
         unset($options['__db'], $options['__original']);
 
         if ($id = $options['id'] ?? null) {
@@ -273,14 +278,14 @@ class Item extends Record
                 $modelName  = ucfirst(class_basename($db));
                 $relation   = str_replace('\\' . $modelName, '\\' . $concern, get_class($db));
 
-                return $db->hasMany($relation, $this);
+                return $db->hasMany($relation, null, $this);
             }
 
             if (isset($values[$name . '_id']) && is_numeric($values[$name . '_id'])) {
                 $modelName = ucfirst(class_basename($db));
                 $relation = str_replace('\\' . $modelName, '\\' . ucfirst($name), get_class($db));
 
-                return $db->belongsTo($relation, $this);
+                return $db->belongsTo($relation, null, $this);
             }
         }
 
@@ -311,14 +316,14 @@ class Item extends Record
             $modelName  = ucfirst(class_basename($db));
             $relation   = str_replace('\\' . $modelName, '\\' . $concern, get_class($db));
 
-            return $db->hasMany($relation, $this);
+            return $db->hasMany($relation, null, $this);
         }
 
         if (isset($values[$name . '_id']) && is_numeric($values[$name . '_id'])) {
             $modelName  = ucfirst(class_basename($db));
             $relation   = str_replace('\\' . $modelName, '\\' . ucfirst($name), get_class($db));
 
-            return $db->belongsTo($relation, $this);
+            return $db->belongsTo($relation, null, $this);
         }
 
         return parent::get($name, $default);
@@ -348,14 +353,14 @@ class Item extends Record
                 $modelName  = ucfirst(class_basename($this['__db']));
                 $relation   = str_replace('\\' . $modelName, '\\' . $concern, get_class($this['__db']));
 
-                return $db->hasMany($relation, $this);
+                return $db->hasMany($relation, null, $this);
             }
 
             if (isset($this[$name . '_id']) && is_numeric($this[$name . '_id'])) {
                 $modelName  = ucfirst(class_basename($this['__db']));
                 $relation   = str_replace('\\' . $modelName, '\\' . ucfirst($name), get_class($this['__db']));
 
-                return $db->belongsTo($relation, $this);
+                return $db->belongsTo($relation, null, $this);
             }
         }
 

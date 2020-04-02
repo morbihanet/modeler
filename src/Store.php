@@ -324,11 +324,11 @@ class Store extends Db
 
     /**
      * @param string $relation
-     * @param Item|null $record
      * @param string|null $fk
-     * @return Item|null
+     * @param Item|null $record
+     * @return mixed|Item|null
      */
-    public function hasOne(string $relation, ?Item $record = null, ?string $fk = null)
+    public function hasOne(string $relation, ?string $fk = null, ?Item $record = null)
     {
         $record = $record ?? Core::get('item_record');
 
@@ -337,11 +337,11 @@ class Store extends Db
 
     /**
      * @param string $relation
-     * @param Item|null $record
      * @param string|null $fk
+     * @param Item|null $record
      * @return Iterator
      */
-    public function hasMany(string $relation, ?Item $record = null, ?string $fk = null)
+    public function hasMany(string $relation, ?string $fk = null, ?Item $record = null)
     {
         $record = $record ?? Core::get('item_record');
 
@@ -355,11 +355,11 @@ class Store extends Db
 
     /**
      * @param string $relation
-     * @param Item|null $record
      * @param string|null $fk
+     * @param Item|null $record
      * @return Db|Item|null
      */
-    public function belongsTo(string $relation, ?Item $record = null, ?string $fk = null)
+    public function belongsTo(string $relation, ?string $fk = null, ?Item $record = null)
     {
         $record = $record ?? Core::get('item_record');
 
@@ -373,26 +373,23 @@ class Store extends Db
 
     /**
      * @param string $relation
-     * @param Item|null $record
      * @param string|null $fk1
      * @param string|null $fk2
+     * @param Item|null $record
      * @return Db|Item|null
      */
-    public function belongsToMany(string $relation, ?Item $record = null, ?string $fk1 = null, ?string $fk2 = null)
+    public function belongsToMany(string $relation, ?string $fk1 = null, ?string $fk2 = null, ?Item $record = null)
     {
         $record = $record ?? Core::get('item_record');
 
         $concern1 = $fk1 ?? $this->getConcern(get_called_class()) . '_id';
         $concern2 = $fk2 ?? $this->getConcern($relation) . '_id';
 
-        $parts = explode('\\', $relation);
-        array_pop($parts);
+        $pivotName = collect([ucfirst($this->getConcern(get_called_class())), ucfirst($this->getConcern($relation))])
+            ->sort()->implode('');
 
-        $pivotModel = implode('\\', $parts) . '\\' .
-            collect([ucfirst($this->getConcern(get_called_class())), ucfirst($this->getConcern($relation))])->sort()->implode('');
-
-        /** @var Store $model */
-        $model = new $pivotModel;
+        /** @var Db $model */
+        $model = Core::getDb($pivotName);
 
         $ids = [];
 
@@ -403,6 +400,6 @@ class Store extends Db
         /** @var Store $model */
         $model = new $relation;
 
-        return $model->find($ids);
+        return $model instanceof Modeler ? $model::find($ids) : $model->find($ids);
     }
 }

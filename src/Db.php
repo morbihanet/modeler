@@ -106,7 +106,11 @@ class Db
         return app()->make(get_called_class());
     }
 
-    public static function make(array $attributes)
+    /**
+     * @param array $attributes
+     * @return Item
+     */
+    public static function make(array $attributes): Item
     {
         return static::self()->create($attributes);
     }
@@ -115,7 +119,7 @@ class Db
      * @param array $data
      * @return Item
      */
-    public function create(array $data)
+    public function create(array $data): Item
     {
         return $this->model($data)->save();
     }
@@ -124,7 +128,7 @@ class Db
      * @param array $data
      * @return Item
      */
-    public function insert(array $data)
+    public function insert(array $data): Item
     {
         return $this->model($data)->save();
     }
@@ -133,7 +137,7 @@ class Db
      * @param array|string $only
      * @return Item
      */
-    public function asPosted($only)
+    public function asPosted($only): Item
     {
         $data = Arr::only($_POST, func_get_args());
 
@@ -143,7 +147,7 @@ class Db
     /**
      * @return Db
      */
-    public function newQuery()
+    public function newQuery(): self
     {
         return static::self();
     }
@@ -165,7 +169,7 @@ class Db
      * @param array $data
      * @return Item
      */
-    public function new(array $data = [])
+    public function new(array $data = []): Item
     {
         return $this->model($data);
     }
@@ -185,8 +189,9 @@ class Db
     /**
      * @param Item $model
      * @param callable|null $callback
+     * @return Item
      */
-    public function save(Item $model, ?callable $callback = null)
+    public function save(Item $model, ?callable $callback = null): Item
     {
         $this->fire('saving', $model);
 
@@ -240,7 +245,7 @@ class Db
      */
     public function makeId(): int
     {
-        return dyndb('itdb.' . get_called_class() . '.ids')->increment('id');
+        return Core::dyndb('itdb.' . get_called_class() . '.ids')->increment('id');
     }
 
     /**
@@ -266,7 +271,7 @@ class Db
     {
         $instance = new static;
 
-        if ($instance instanceof Model) {
+        if ($instance instanceof Modeler) {
             return $instance->flush();
         }
 
@@ -312,20 +317,6 @@ class Db
     public function __toString()
     {
         return $this->toJson();
-    }
-
-    /**
-     * @param $id
-     * @param null $default
-     * @return Item|null
-     */
-    public function find($id, $default = null)
-    {
-        if ($row = $this->engine->find($id)) {
-            return $this->model($this->withSelect($row));
-        }
-
-        return $default;
     }
 
     /**
@@ -501,7 +492,7 @@ class Db
             $collection = [];
 
             for ($i = 0; $i < $factory->_times; ++$i) {
-                $row = is_callable($callable) ? $callable($faker ?? faker()) : $this->seeder($faker ?? faker());
+                $row = is_callable($callable) ? $callable($faker ?? Core::faker()) : $this->seeder($faker ?? Core::faker());
                 $collection[] = $this->model(array_merge($row, $attrs));
             }
 
@@ -512,7 +503,7 @@ class Db
                     }
                 };
 
-                return $this->setEngine(iterator($cb)->setModel($this));
+                return $this->setEngine(Core::iterator($cb)->setModel($this));
             }
 
             return $collection;
@@ -520,7 +511,7 @@ class Db
             $collection = [];
 
             for ($i = 0; $i < $factory->_times; ++$i) {
-                $row = is_callable($callable) ? $callable($faker ?? faker()) : $this->seeder($faker ?? faker());
+                $row = is_callable($callable) ? $callable($faker ?? Core::faker()) : $this->seeder($faker ?? Core::faker());
                 $collection[] = $this->model(array_merge($row, $attrs))->save();
             }
 
@@ -628,6 +619,7 @@ class Db
         return $this->firstOr(false);
     }
 
+
     /**
      * @return Item|mixed|null
      * @throws \Exception
@@ -676,7 +668,7 @@ class Db
      * @param bool $_cache
      * @return Db
      */
-    public function setCache(bool $cache)
+    public function setCache(bool $cache = true)
     {
         $this->__cache = $cache;
 
@@ -738,15 +730,16 @@ class Db
     }
 
     /**
-     * @param Item $record
      * @param string $class
      * @param string $morphName
+     * @param Item|null $record
      * @return Iterator
      */
-    public function morphToMany(Item $record, string $class, string $morphName)
+    public function morphToMany(string $class, string $morphName, ?Item $record = null)
     {
-        $keyName = $morphName . '_type';
-        $keyValue = $morphName . '_id';
+        $record     = $record ?? Core::get('item_record');
+        $keyName    = $morphName . '_type';
+        $keyValue   = $morphName . '_id';
 
         /** @var Db $db */
         $db = new $class;
@@ -758,28 +751,32 @@ class Db
     }
 
     /**
-     * @param Item $record
      * @param string $class
      * @param string $morphName
+     * @param Item|null $record
      * @return Item|null
      */
-    public function morphToOne(Item $record, string $class, string $morphName)
+    public function morphToOne(string $class, string $morphName, ?Item $record = null)
     {
+        $record = $record ?? Core::get('item_record');
+
         return $this->morphToMany($record, $class, $morphName)->first();
     }
 
     /**
-     * @param Item $record
      * @param string|null $morphName
+     * @param Item|null $record
      * @return Item|null
      */
-    public function morphTo(Item $record, ?string $morphName = null)
+    public function morphTo(?string $morphName = null, ?Item $record = null)
     {
         if (null === $morphName) {
             [,, $caller] = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 3);
 
             $morphName = $caller['function'];
         }
+
+        $record = $record ?? Core::get('item_record');
 
         $morphedClass = $record[$morphName . '_type'];
         $morphedId = $record[$morphName . '_id'];

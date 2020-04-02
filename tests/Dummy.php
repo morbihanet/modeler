@@ -4,4 +4,4 @@ namespace Morbihanet\Modeler\Test;
 
 use Morbihanet\Modeler\Modeler;
 
-class Book extends Modeler {}
+class Dummy extends Modeler {}

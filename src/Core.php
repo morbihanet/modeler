@@ -554,4 +554,11 @@ class Core
 
         return $string;
     }
+
+    public static function getDb($item)
+    {
+        $name = $item instanceof Item ? Str::lower(class_basename($item)) : Str::lower(static::uncamelize($item));
+
+        return Modeler::factorModel($name);
+    }
 }

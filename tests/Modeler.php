@@ -54,6 +54,23 @@ class Modeler extends TestCase
     }
 
     /** @test */
+    public function it_should_be_transactionable()
+    {
+        Book::beginTransaction();
+
+        Book::create(['title' => 'Les Fleurs du Mal', 'year' => 1867]);
+        $this->assertEquals(1, Book::count());
+        Book::rollback();
+        $this->assertEquals(0, Book::count());
+
+        Book::beginTransaction();
+        Book::create(['title' => 'Les Fleurs du Mal', 'year' => 1867]);
+        $this->assertEquals(1, Book::count());
+        Book::commit();
+        $this->assertEquals(1, Book::count());
+    }
+
+    /** @test */
     public function it_should_be_item()
     {
         Book::create(['title' => 'Les Fleurs du Mal', 'year' => 1867]);
@@ -70,9 +87,13 @@ class Modeler extends TestCase
         Book::create(['title' => 'Notre Dame de Paris', 'year' => 1831]);
 
         $this->assertEquals(2, Book::where('year', '<', 1900)->count());
+        $this->assertEquals(2, Book::lt('year', 1900)->count());
         $this->assertEquals(2, Book::where('year', '>', 1800)->count());
+        $this->assertEquals(2, Book::gt('year', 1800)->count());
         $this->assertEquals(1, Book::where('year', '<', 1850)->count());
         $this->assertEquals(1, Book::where('year', '>', 1850)->count());
+        $this->assertEquals(1, Book::like('title', '%Fleurs%')->count());
+        $this->assertEquals(1, Book::likeI('title', '%fleurs%')->count());
         $this->assertEquals(1, Book::contains('title', 'fleurs')->count());
         $this->assertEquals(1, Book::contains('title', 'paris')->count());
         $this->assertEquals(2, Book::contains('title', 'paris')->orContains('title', 'fleurs')->count());
@@ -136,6 +157,35 @@ class Modeler extends TestCase
         $this->assertEquals(1, Author::oldest()->first()->id);
         $this->assertEquals('Les Contemplations', Book::sortBy('title')->first()->title);
         $this->assertEquals('Notre Dame de Paris', Book::sortByDesc('title')->first()->title);
+    }
+
+    /** @test */
+    public function it_should_be_manytomanyable()
+    {
+        $tag1 = Tag::create(['name' => 'tag1']);
+        $tag2 = Tag::create(['name' => 'tag2']);
+        $notreDame = Book::create(['title' => 'Notre Dame de Paris', 'year' => 1831]);
+        $notreDame->sync($tag1);
+        $notreDame->sync($tag2);
+        $notreDame->sync($tag1);
+        $notreDame->sync($tag2);
+
+        $this->assertEquals(2, BookTag::count());
+        $this->assertEquals('tag1', $notreDame->getPivots(Tag::class)->first()->name);
+
+        $notreDame->detach($tag2);
+
+        $this->assertEquals(1, BookTag::count());
+    }
+
+    /** @test */
+    public function it_should_be_selectable()
+    {
+        Dummy::create(['name' => 'foo', 'label' => 'bar']);
+        $row = Dummy::select('name')->first();
+
+        $this->assertArrayNotHasKey('label', $row->toArray());
+        $this->assertArrayNotHasKey('created_at', $row->toArray());
     }
 
     /** @test */

@@ -2,7 +2,6 @@
 
 namespace Morbihanet\Modeler;
 
-
  trait ManyToManyable
  {
      /**
@@ -15,20 +14,16 @@ namespace Morbihanet\Modeler;
          $record = $this;
 
          /** @var Db $db */
-         $db = $record['__db'];
+         $db = Core::getDb($record);
 
          /** @var Db $db */
-         $dbPivot = $pivot['__db'];
+         $dbPivot = Core::getDb($pivot);
 
-         $parts = explode('\\', get_class($dbPivot));
-         array_pop($parts);
-
-         $pivotModel = implode('\\', $parts) . '\\' .
-             collect([ucfirst($db->getConcern(get_class($db))), ucfirst($db->getConcern(get_class($dbPivot)))])
+         $pivotName = collect([ucfirst($db->getConcern(get_class($db))), ucfirst($db->getConcern(get_class($dbPivot)))])
                  ->sort()->implode('');
 
          /** @var Db $model */
-         $model = new $pivotModel;
+         $model = Core::getDb($pivotName);
 
          return $model->setCache($db->isCache());
      }
@@ -37,16 +32,16 @@ namespace Morbihanet\Modeler;
       * @param Item $pivot
       * @return array
       */
-     protected function getPivotKeys(IteractorItem $pivot)
+     protected function getPivotKeys(Item $pivot)
      {
          /** @var Item $parent */
          $record = $this;
 
          /** @var Db $db */
-         $db = $record['__db'];
+         $db = Core::getDb($record);
 
          /** @var Db $db */
-         $dbPivot = $pivot['__db'];
+         $dbPivot = Core::getDb($pivot);
 
          return [$db->getConcern(get_class($db)) . '_id', $db->getConcern(get_class($dbPivot)) . '_id'];
      }
@@ -56,7 +51,7 @@ namespace Morbihanet\Modeler;
       * @param array $attributes
       * @return Item
       */
-     public function attach(IteractorItem $pivot, array $attributes = [])
+     public function attach(Item $pivot, array $attributes = [])
      {
          $db = $this->getPivotModel($pivot);
          [$fk1, $fk2] = $this->getPivotKeys($pivot);
@@ -65,28 +60,39 @@ namespace Morbihanet\Modeler;
      }
 
      /**
-      * @param IteractorItem $pivot
+      * @param Item $pivot
       * @return bool
       */
-     public function detach(IteractorItem $pivot)
+     public function detach(Item $pivot)
      {
          $db = $this->getPivotModel($pivot);
          [$fk1, $fk2] = $this->getPivotKeys($pivot);
 
-         return 0 < $db->where($fk1, $this['id'])->where($fk2, $pivot['id'])->destroy();
+         /** @var Iterator $query */
+         $query = $db->where($fk1, $this['id']);
+
+         return 0 < $query->where($fk2, $pivot['id'])->destroy();
      }
 
      /**
-      * @param IteractorItem $pivot
-      * @return \Mambo\Item|IteractorItem|null
+      * @param Item $pivot
+      * @return mixed|Item|null
       */
-     public function sync(IteractorItem $pivot)
+     public function sync(Item $pivot)
      {
          $db = $this->getPivotModel($pivot);
          [$fk1, $fk2] = $this->getPivotKeys($pivot);
 
          return $db->firstOrCreate([$fk1 => $this['id'], $fk2 => $pivot['id']]);
 
+     }
+
+     public function getPivots(string $relation, ?string $fk1 = null, ?string $fk2 = null)
+     {
+         /** @var Db $db */
+         $db = Core::getDb($this);
+
+         return $db->belongsToMany($relation, $fk1, $fk2, $this);
      }
  }
 
