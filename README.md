@@ -1,5 +1,4 @@
 [![Build Status](https://travis-ci.org/morbihanet/modeler.svg?branch=master)](https://travis-ci.org/morbihanet/modeler)
-[![Tests](https://github.com/morbihanet/modeler/workflows/Tests/badge.svg)](https://github.com/morbihanet/modeler/actions?query=workflow%3ATests)
 
 ### Usage
 
