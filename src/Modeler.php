@@ -117,6 +117,7 @@ use Illuminate\Database\Eloquent\Collection;
 class Modeler extends Facade
 {
     protected static $store = Store::class;
+    protected static $caches = [];
 
     protected static function getFacadeAccessor()
     {
@@ -130,13 +131,17 @@ class Modeler extends Facade
 
     public static function factorModel(string $model)
     {
+        if (isset(static::$caches[$model])) {
+            return static::$caches[$model];
+        }
+
         $model = ucfirst(Str::camel(str_replace('.', '\\_', $model)));
         $namespace = config('modeler.model_class', 'DB\\Models');
 
         $class = $namespace . '\\' . $model;
 
         if (class_exists($class)) {
-            return new $class;
+            return static::$caches[$model] = new $class;
         }
 
         $code = 'namespace ' . $namespace . ';';
@@ -147,10 +152,12 @@ class Modeler extends Facade
             $code .= 'class ' . $model . ' extends \\Morbihanet\\Modeler\\RedisStore {}';
         } else if (static::$store === MemoryStore::class) {
             $code .= 'class ' . $model . ' extends \\Morbihanet\\Modeler\\MemoryStore {}';
+        } else if (static::$store === FileStore::class) {
+            $code .= 'class ' . $model . ' extends \\Morbihanet\\Modeler\\FileStore {}';
         }
 
         eval($code);
 
-        return new $class;
+        return static::$caches[$model] = new $class;
     }
 }

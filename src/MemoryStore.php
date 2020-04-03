@@ -230,13 +230,15 @@ class MemoryStore extends Db
      */
     public function rollback(): bool
     {
-        $data = Core::set('transaction_' . $this->__prefix, []);
+        $data = Core::get('transaction_' . $this->__prefix, []);
 
         if (!empty($data)) {
             static::$data[$this->__prefix] = $data['data'];
             static::$lc[$this->__prefix] = $data['lc'];
             static::$ids[$this->__prefix] = $data['ids'];
         }
+
+        Core::delete('transaction_' . $this->__prefix);
 
         return false;
     }
@@ -274,19 +276,19 @@ class MemoryStore extends Db
         $hashkey = sha1(serialize(func_get_args()));
 
         $ids = static::$__ids[get_called_class()][$hashkey] ?? function () use ($hashkey, $key, $operator, $value) {
-                $iterator   = $this->getEngine()->where($key, $operator, $value);
-                $ids        = [];
+            $iterator   = $this->getEngine()->where($key, $operator, $value);
+            $ids        = [];
 
-                foreach ($iterator as $row) {
-                    $ids[] = $row['id'];
-                }
+            foreach ($iterator as $row) {
+                $ids[] = $row['id'];
+            }
 
-                unset($iterator);
+            unset($iterator);
 
-                static::$__ids[get_called_class()][$hashkey] = $ids;
+            static::$__ids[get_called_class()][$hashkey] = $ids;
 
-                return $ids;
-            };
+            return $ids;
+        };
 
         return $this->withIds(value($ids));
     }

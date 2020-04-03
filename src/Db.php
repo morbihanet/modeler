@@ -910,6 +910,13 @@ class Db
         $pivotName = collect([ucfirst($this->getConcern(get_called_class())), ucfirst($this->getConcern($relation))])
             ->sort()->implode('');
 
+        if (fnmatch('*_*_*', $pivotName)) {
+            [$suffix, $part] = explode('_', $pivotName, 2);
+            $part = str_replace($suffix, '', $part);
+
+            $pivotName = ucfirst(Str::camel(Str::lower($suffix) . '_' . $part));
+        }
+
         /** @var Db $model */
         $model = Core::getDb($pivotName);
 
@@ -923,5 +930,37 @@ class Db
         $model = new $relation;
 
         return $model instanceof Modeler ? $model::find($ids) : $model->find($ids);
+    }
+
+    /**
+     * @param $key
+     * @param null $operator
+     * @param null $value
+     * @param bool $returnIterator
+     * @return Iterator|mixed|null
+     */
+    public function where($key, $operator = null, $value = null)
+    {
+        $this->__where = true;
+        $this->__wheres[] = func_get_args();
+
+        $hashkey = sha1(serialize(func_get_args()));
+
+        $ids = static::$__ids[get_called_class()][$hashkey] ?? function () use ($hashkey, $key, $operator, $value) {
+                $iterator   = $this->getEngine()->where($key, $operator, $value);
+                $ids        = [];
+
+                foreach ($iterator as $row) {
+                    $ids[] = $row['id'];
+                }
+
+                unset($iterator);
+
+                static::$__ids[get_called_class()][$hashkey] = $ids;
+
+                return $ids;
+            };
+
+        return $this->withIds(value($ids));
     }
 }

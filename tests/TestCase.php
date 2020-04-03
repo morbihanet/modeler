@@ -3,6 +3,7 @@
 namespace Morbihanet\Modeler\Test;
 
 use Morbihanet\Modeler\Redis;
+use Morbihanet\Modeler\FileStore;
 use Morbihanet\Modeler\MemoryStore;
 use Illuminate\Database\Schema\Blueprint;
 use Orchestra\Testbench\TestCase as Orchestra;
@@ -15,12 +16,21 @@ abstract class TestCase extends Orchestra
         parent::setUp();
         $this->setUpDatabase();
         Redis::engine(new Mock);
+
+        if (!is_dir(__DIR__ . '/data')) {
+            mkdir(__DIR__ . '/data', 0777);
+        }
     }
 
     public function tearDown(): void
     {
         Redis::flushdb();
         MemoryStore::empty();
+        FileStore::empty();
+
+        if (is_dir(__DIR__ . '/data')) {
+            @rmdir(__DIR__ . '/data');
+        }
     }
 
     /**
@@ -50,6 +60,7 @@ abstract class TestCase extends Orchestra
             'model_class' => 'App\\Repositories',
             'item_class' => 'App\\Entities',
             'cache_ttl' => 24 * 3600,
+            'file_dir' => __DIR__ . '/data',
         ]);
     }
 
