@@ -42,7 +42,7 @@
     "extra": {
         "laravel": {
             "providers": [
-                "Morbihanet\\Mpdeler\\ModelerServiceProvider"
+                "Morbihanet\\Modeler\\ModelerServiceProvider"
             ]
         }
     },
