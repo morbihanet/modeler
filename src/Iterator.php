@@ -670,7 +670,7 @@ class Iterator implements IteratorAggregate
 
         return $this->filter(function($item) use ($key, $operator, $value) {
             $item = (object) $item;
-            $actual = $item->{$key};
+            $actual = $item->{$key} ?? null;
 
             $insensitive = in_array($operator, ['=i', 'like i', 'not like i']);
 
@@ -1598,10 +1598,6 @@ class Iterator implements IteratorAggregate
         }
 
         return $results;
-
-        return $this->over(function () use ($method, $params) {
-            yield from $this->collect()->$method(...$params);
-        });
     }
 
     /**

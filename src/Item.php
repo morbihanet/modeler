@@ -10,11 +10,6 @@ class Item extends Record
 
     public function __construct(Db $db, array $options = [])
     {
-//        if (isset($options['__db'])) {
-//            dd($options['__db']);
-//            Core::set();
-//        }
-
         unset($options['__db'], $options['__original']);
 
         if ($id = $options['id'] ?? null) {
@@ -35,7 +30,7 @@ class Item extends Record
      */
     public function original()
     {
-        return new self($this['__db'] ?? Core::get('item_db'), $this['__original']);
+        return new self($this['__db'] ?? Core::getDb($this), $this['__original']);
     }
 
     /**
@@ -148,7 +143,7 @@ class Item extends Record
         }
 
         /** @var Db $db */
-        $db = $this['__db'] ?? Core::get('item_db');
+        $db = $this['__db'] ?? Core::getDb($this);
 
         if ($db) {
             $methods = get_class_methods($db);
@@ -170,7 +165,7 @@ class Item extends Record
     public function delete(?callable $callback = null)
     {
         /** @var Db $db */
-        $db = $this['__db'] ?? Core::get('item_db');
+        $db = $this['__db'] ?? Core::getDb($this);
 
         return $db->delete($this, $callback);
     }
@@ -189,7 +184,7 @@ class Item extends Record
      */
     public function copy(array $toMerge = [])
     {
-        $db = $this['__db'] ?? Core::get('item_db');
+        $db = $this['__db'] ?? Core::getDb($this);
 
         unset($this["id"], $this["created_at"], $this["updated_at"], $this["deleted_at"]);
 
@@ -209,7 +204,7 @@ class Item extends Record
     {
         if ($this->exists()) {
             /** @var Db $db */
-            $db = $this['__db'] ?? Core::get(-+'item_db');
+            $db = $this['__db'] ?? Core::getDb($this);
 
             return sprintf(
                 "%s:%s:%s",
@@ -258,7 +253,7 @@ class Item extends Record
         $values = $this->toArray();
 
         /** @var Db $db */
-        $db = $values['__db'] ?? Core::get('item_db') ?? null;
+        $db = $values['__db'] ?? Core::getDb($this) ?? null;
 
         if (null === $db) {
             return parent::__get($name);
@@ -273,8 +268,8 @@ class Item extends Record
         }
 
         if (!array_key_exists($name, $values)) {
-            if (fnmatch('*s', $name)) {
-                $concern    = ucfirst(substr($name, 0, -1));
+            if (fnmatch('*s', $name) && !isset($values[$name . '_id'])) {
+                $concern    = ucfirst(Str::camel(substr($name, 0, -1)));
                 $modelName  = ucfirst(class_basename($db));
                 $relation   = str_replace('\\' . $modelName, '\\' . $concern, get_class($db));
 
@@ -283,7 +278,7 @@ class Item extends Record
 
             if (isset($values[$name . '_id']) && is_numeric($values[$name . '_id'])) {
                 $modelName = ucfirst(class_basename($db));
-                $relation = str_replace('\\' . $modelName, '\\' . ucfirst($name), get_class($db));
+                $relation = str_replace('\\' . $modelName, '\\' . ucfirst(Str::camel($name)), get_class($db));
 
                 return $db->belongsTo($relation, null, $this);
             }
@@ -297,7 +292,7 @@ class Item extends Record
         $values = $this->toArray();
 
         /** @var Db|null $db */
-        $db = $values['__db'] ?? Core::get('item_db') ?? null;
+        $db = $values['__db'] ?? Core::getDb($this) ?? null;
 
         if (null === $db) {
             return parent::get($name, $default);
@@ -311,8 +306,8 @@ class Item extends Record
             return Carbon::createFromTimestamp((int) $values[$name]);
         }
 
-        if (fnmatch('*s', $name)) {
-            $concern    = ucfirst(substr($name, 0, -1));
+        if (fnmatch('*s', $name) && !isset($values[$name . '_id'])) {
+            $concern    = ucfirst(Str::camel(substr($name, 0, -1)));
             $modelName  = ucfirst(class_basename($db));
             $relation   = str_replace('\\' . $modelName, '\\' . $concern, get_class($db));
 
@@ -321,7 +316,7 @@ class Item extends Record
 
         if (isset($values[$name . '_id']) && is_numeric($values[$name . '_id'])) {
             $modelName  = ucfirst(class_basename($db));
-            $relation   = str_replace('\\' . $modelName, '\\' . ucfirst($name), get_class($db));
+            $relation   = str_replace('\\' . $modelName, '\\' . ucfirst(Str::camel($name)), get_class($db));
 
             return $db->belongsTo($relation, null, $this);
         }
@@ -337,7 +332,7 @@ class Item extends Record
     public function __call(string $name, array $arguments)
     {
         /** @var Db|null $db */
-        $db = $values['__db'] ?? Core::get('item_db') ?? null;
+        $db = $values['__db'] ?? Core::getDb($this) ?? null;
 
         if (in_array($name, get_class_methods($db))) {
             $arguments[] = $this;
@@ -348,17 +343,17 @@ class Item extends Record
         $values = $this->toArray();
 
         if (!array_key_exists($name, $values)) {
-            if (fnmatch('*s', $name)) {
-                $concern    = ucfirst(substr($name, 0, -1));
-                $modelName  = ucfirst(class_basename($this['__db']));
-                $relation   = str_replace('\\' . $modelName, '\\' . $concern, get_class($this['__db']));
+            if (fnmatch('*s', $name) && !isset($values[$name . '_id'])) {
+                $concern    = ucfirst(Str::camel(substr($name, 0, -1)));
+                $modelName  = ucfirst(class_basename($db));
+                $relation   = str_replace('\\' . $modelName, '\\' . $concern, get_class($db));
 
                 return $db->hasMany($relation, null, $this);
             }
 
             if (isset($this[$name . '_id']) && is_numeric($this[$name . '_id'])) {
-                $modelName  = ucfirst(class_basename($this['__db']));
-                $relation   = str_replace('\\' . $modelName, '\\' . ucfirst($name), get_class($this['__db']));
+                $modelName  = ucfirst(class_basename($db));
+                $relation   = str_replace('\\' . $modelName, '\\' . ucfirst(Str::camel($name)), get_class($db));
 
                 return $db->belongsTo($relation, null, $this);
             }
@@ -383,9 +378,7 @@ class Item extends Record
     public function toArray(): array
     {
         /** @var Db $db */
-        $db = Core::fullObjectToArray($this)['options']['__db'] ?? Core::get('item_db') ?? Core::get('itdb');
-
-        Core::set('itdb', $db);
+        $db = Core::fullObjectToArray($this)['options']['__db'] ?? Core::get('item_db');
 
         $row = parent::toArray();
 

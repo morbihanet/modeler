@@ -60,9 +60,9 @@ class Core
     /**
      * @return Iterator
      */
-    public static function store()
+    public static function store($scope = null)
     {
-        return static::get('store');
+        return static::get('store', new Iterator($scope));
     }
 
     public static function faker(string $lng = 'fr_FR')
@@ -555,6 +555,10 @@ class Core
         return $string;
     }
 
+    /**
+     * @param $item
+     * @return Db
+     */
     public static function getDb($item)
     {
         $name = $item instanceof Item ? Str::lower(class_basename($item)) : Str::lower(static::uncamelize($item));

@@ -19,8 +19,9 @@
         }
     ],
     "require": {
-        "php" : "^7.4",
+        "php": "^7.4",
         "ext-json": "*",
+        "josiasmontag/laravel-redis-mock": "^1.2",
         "laravel/framework": "^5.8|^6.0|^7.0"
     },
     "require-dev": {

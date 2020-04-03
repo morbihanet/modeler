@@ -2,6 +2,8 @@
 
 namespace Morbihanet\Modeler;
 
+ use Illuminate\Support\Str;
+
  trait ManyToManyable
  {
      /**
@@ -21,6 +23,13 @@ namespace Morbihanet\Modeler;
 
          $pivotName = collect([ucfirst($db->getConcern(get_class($db))), ucfirst($db->getConcern(get_class($dbPivot)))])
                  ->sort()->implode('');
+
+         if (fnmatch('*_*_*', $pivotName)) {
+             [$suffix, $part] = explode('_', $pivotName, 2);
+             $part = str_replace($suffix, '', $part);
+
+             $pivotName = ucfirst(Str::camel(Str::lower($suffix) . '_' . $part));
+         }
 
          /** @var Db $model */
          $model = Core::getDb($pivotName);

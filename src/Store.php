@@ -287,6 +287,7 @@ class Store extends Db
 
         if (!in_array($operator, $operators)) {
             $hashkey = sha1(serialize(func_get_args()));
+
             $ids = self::$__ids[get_called_class()][$hashkey] ?? function () use ($hashkey, $key, $operator, $value) {
                     $iterator   = $this->getEngine()->where($key, $operator, $value);
                     $ids        = [];
@@ -320,86 +321,5 @@ class Store extends Db
         };
 
         return $this->setEngine(Core::iterator($db)->setModel($this))->getEngine()->where($key, $operator, $value);
-    }
-
-    /**
-     * @param string $relation
-     * @param string|null $fk
-     * @param Item|null $record
-     * @return mixed|Item|null
-     */
-    public function hasOne(string $relation, ?string $fk = null, ?Item $record = null)
-    {
-        $record = $record ?? Core::get('item_record');
-
-        return $this->hasMany($relation, $record, $fk)->first();
-    }
-
-    /**
-     * @param string $relation
-     * @param string|null $fk
-     * @param Item|null $record
-     * @return Iterator
-     */
-    public function hasMany(string $relation, ?string $fk = null, ?Item $record = null)
-    {
-        $record = $record ?? Core::get('item_record');
-
-        $concern = $fk ?? $this->getConcern(get_called_class()) . '_id';
-
-        /** @var Store $model */
-        $model = new $relation;
-
-        return $model->where($concern, (int) $record['id']);
-    }
-
-    /**
-     * @param string $relation
-     * @param string|null $fk
-     * @param Item|null $record
-     * @return Db|Item|null
-     */
-    public function belongsTo(string $relation, ?string $fk = null, ?Item $record = null)
-    {
-        $record = $record ?? Core::get('item_record');
-
-        $concern = $fk ?? $this->getConcern($relation) . '_id';;
-
-        /** @var Store $model */
-        $model = new $relation;
-
-        return $model->find((int) $record[$concern]);
-    }
-
-    /**
-     * @param string $relation
-     * @param string|null $fk1
-     * @param string|null $fk2
-     * @param Item|null $record
-     * @return Db|Item|null
-     */
-    public function belongsToMany(string $relation, ?string $fk1 = null, ?string $fk2 = null, ?Item $record = null)
-    {
-        $record = $record ?? Core::get('item_record');
-
-        $concern1 = $fk1 ?? $this->getConcern(get_called_class()) . '_id';
-        $concern2 = $fk2 ?? $this->getConcern($relation) . '_id';
-
-        $pivotName = collect([ucfirst($this->getConcern(get_called_class())), ucfirst($this->getConcern($relation))])
-            ->sort()->implode('');
-
-        /** @var Db $model */
-        $model = Core::getDb($pivotName);
-
-        $ids = [];
-
-        foreach ($model->where($concern1, (int) $record['id']) as $row) {
-            $ids[] = (int) $row[$concern2];
-        }
-
-        /** @var Store $model */
-        $model = new $relation;
-
-        return $model instanceof Modeler ? $model::find($ids) : $model->find($ids);
     }
 }

@@ -2,8 +2,11 @@
 
 namespace Morbihanet\Modeler\Test;
 
+use Morbihanet\Modeler\Redis;
+use Morbihanet\Modeler\MemoryStore;
 use Illuminate\Database\Schema\Blueprint;
 use Orchestra\Testbench\TestCase as Orchestra;
+use M6Web\Component\RedisMock\RedisMock as Mock;
 
 abstract class TestCase extends Orchestra
 {
@@ -11,6 +14,13 @@ abstract class TestCase extends Orchestra
     {
         parent::setUp();
         $this->setUpDatabase();
+        Redis::engine(new Mock);
+    }
+
+    public function tearDown(): void
+    {
+        Redis::flushdb();
+        MemoryStore::empty();
     }
 
     /**

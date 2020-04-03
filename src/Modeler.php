@@ -116,9 +116,16 @@ use Illuminate\Database\Eloquent\Collection;
 
 class Modeler extends Facade
 {
+    protected static $store = Store::class;
+
     protected static function getFacadeAccessor()
     {
         return static::factorModel(class_basename(get_called_class()));
+    }
+
+    public static function setStore(string $store)
+    {
+        static::$store = $store;
     }
 
     public static function factorModel(string $model)
@@ -133,7 +140,14 @@ class Modeler extends Facade
         }
 
         $code = 'namespace ' . $namespace . ';';
-        $code .= 'class ' . $model . ' extends \\Morbihanet\\Modeler\\Store {}';
+
+        if (static::$store === Store::class) {
+            $code .= 'class ' . $model . ' extends \\Morbihanet\\Modeler\\Store {}';
+        } else if (static::$store === RedisStore::class) {
+            $code .= 'class ' . $model . ' extends \\Morbihanet\\Modeler\\RedisStore {}';
+        } else if (static::$store === MemoryStore::class) {
+            $code .= 'class ' . $model . ' extends \\Morbihanet\\Modeler\\MemoryStore {}';
+        }
 
         eval($code);
 
