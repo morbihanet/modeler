@@ -20,9 +20,9 @@ class Auth
 
     /**
      * @param $session
-     * @param Db $db
+     * @param Modeler $db
      */
-    public function __construct(&$session, Db $db)
+    public function __construct(&$session, Modeler $db)
     {
         $this->session = &$session;
         $this->db = $db;
@@ -30,10 +30,10 @@ class Auth
 
     /**
      * @param $session
-     * @param Db $db
+     * @param Modeler $db
      * @return Auth
      */
-    public static function getInstance(&$session, Db $db): self
+    public static function getInstance(&$session, Modeler $db): self
     {
         if (!$instance = Arr::get(self::$instances, $class = get_class($db))) {
             $instance = self::$instances[$class] = new self($session, $db);
@@ -168,10 +168,10 @@ class Auth
     }
 
     /**
-     * @param Db $db
+     * @param Modeler $db
      * @return Auth
      */
-    public function setDb(Db $db): Auth
+    public function setDb(Modeler $db): Auth
     {
         $this->db = $db;
 
