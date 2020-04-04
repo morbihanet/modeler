@@ -8,8 +8,6 @@ class Item extends Record
 {
     use ManyToManyable;
 
-    protected bool $authenticable = false;
-
     public function __construct(Db $db, array $options = [])
     {
         unset($options['__db'], $options['__original']);

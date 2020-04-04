@@ -119,6 +119,7 @@ class Modeler extends Facade
 {
     protected static $store = Store::class;
     protected static $caches = [];
+    protected bool $authenticable = false;
 
     protected static function getFacadeAccessor()
     {
