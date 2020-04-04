@@ -1,3 +1,3 @@
 .PHONY: test
 test:
-	php vendor/bin/phpunit tests/Modeler.php
+	php vendor/bin/phpunit

@@ -555,6 +555,42 @@ class Core
         return $string;
     }
 
+    public static function notSame($a, $b)
+    {
+        return $a !== $b;
+    }
+
+    public static function pattern($array, $pattern = '*')
+    {
+        $array = static::arrayable($array) ? $array->toArray() : $array;
+
+        $collection = [];
+
+        if (Arr::isAssoc($array)) {
+            foreach ($array as $k => $v) {
+                if (fnmatch($pattern, $k)) {
+                    $collection[$k] = $v;
+                }
+            }
+        } else {
+            foreach ($array as $k) {
+                if (fnmatch($pattern, $k)) {
+                    $collection[] = $k;
+                }
+            }
+        }
+
+        return $collection;
+    }
+
+    public static function session(
+        string $namespace = 'web',
+        string $userKey = 'user',
+        ?string $userModel = null
+    ): Session {
+        return Session::getInstance($namespace, $userKey, $userModel);
+    }
+
     /**
      * @param $item
      * @return Db

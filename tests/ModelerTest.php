@@ -1,7 +1,7 @@
 <?php
 namespace Morbihanet\Modeler\Test;
 
-class Modeler extends TestCase
+class ModelerTest extends TestCase
 {
     /** @test */
     public function it_should_be_empty()
@@ -308,10 +308,6 @@ class Modeler extends TestCase
         $this->assertEquals(1, Book::where('year', '>', 1850)->count());
         $this->assertEquals(1, Book::like('title', '%Fleurs%')->count());
         $this->assertEquals(1, Book::likeI('title', '%fleurs%')->count());
-        $this->assertEquals(1, Book::contains('title', 'fleurs')->count());
-        $this->assertEquals(1, Book::contains('title', 'paris')->count());
-        $this->assertEquals(2, Book::contains('title', 'paris')->orContains('title', 'fleurs')->count());
-        $this->assertEquals(1, Book::contains('title', 'paris')->orContains('title', 'dummy')->count());
     }
 
     /** @test */
@@ -328,10 +324,6 @@ class Modeler extends TestCase
         $this->assertEquals(1, RedisBook::where('year', '>', 1850)->count());
         $this->assertEquals(1, RedisBook::like('title', '%Fleurs%')->count());
         $this->assertEquals(1, RedisBook::likeI('title', '%fleurs%')->count());
-        $this->assertEquals(1, RedisBook::contains('title', 'fleurs')->count());
-        $this->assertEquals(1, RedisBook::contains('title', 'paris')->count());
-        $this->assertEquals(2, RedisBook::contains('title', 'paris')->orContains('title', 'fleurs')->count());
-        $this->assertEquals(1, RedisBook::contains('title', 'paris')->orContains('title', 'dummy')->count());
     }
 
     /** @test */
@@ -348,10 +340,6 @@ class Modeler extends TestCase
         $this->assertEquals(1, MemoryBook::where('year', '>', 1850)->count());
         $this->assertEquals(1, MemoryBook::like('title', '%Fleurs%')->count());
         $this->assertEquals(1, MemoryBook::likeI('title', '%fleurs%')->count());
-        $this->assertEquals(1, MemoryBook::contains('title', 'fleurs')->count());
-        $this->assertEquals(1, MemoryBook::contains('title', 'paris')->count());
-        $this->assertEquals(2, MemoryBook::contains('title', 'paris')->orContains('title', 'fleurs')->count());
-        $this->assertEquals(1, MemoryBook::contains('title', 'paris')->orContains('title', 'dummy')->count());
     }
 
     /** @test */
@@ -368,10 +356,6 @@ class Modeler extends TestCase
         $this->assertEquals(1, FileBook::where('year', '>', 1850)->count());
         $this->assertEquals(1, FileBook::like('title', '%Fleurs%')->count());
         $this->assertEquals(1, FileBook::likeI('title', '%fleurs%')->count());
-        $this->assertEquals(1, FileBook::contains('title', 'fleurs')->count());
-        $this->assertEquals(1, FileBook::contains('title', 'paris')->count());
-        $this->assertEquals(2, FileBook::contains('title', 'paris')->orContains('title', 'fleurs')->count());
-        $this->assertEquals(1, FileBook::contains('title', 'paris')->orContains('title', 'dummy')->count());
     }
 
     /** @test */
