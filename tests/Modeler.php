@@ -1,7 +1,7 @@
 <?php
 namespace Morbihanet\Modeler\Test;
 
-class ModelerTest extends TestCase
+class Modeler extends TestCase
 {
     /** @test */
     public function it_should_be_empty()
