@@ -88,7 +88,7 @@ class Auth
     public function login(
         string $username,
         string $password,
-        string $usernamefield = 'username',
+        string $usernamefield = 'email',
         string $passwordField = 'password'
     ): ?Item {
         if ($user = $this->db->where($usernamefield, $username)->first()) {
