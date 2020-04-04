@@ -77,7 +77,7 @@ class Auth
             return null;
         }
 
-        return $this->db->findOrFail($id);
+        return $this->db::findOrFail($id);
     }
 
     /**
