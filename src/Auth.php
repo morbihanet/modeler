@@ -91,7 +91,7 @@ class Auth
         string $usernamefield = 'email',
         string $passwordField = 'password'
     ): ?Item {
-        if ($user = $this->db->where($usernamefield, $username)->first()) {
+        if ($user = $this->db::where($usernamefield, $username)->first()) {
             if (password_verify($password, $user->{$passwordField})) {
                 $this->session['auth'] = $user->id;
 
