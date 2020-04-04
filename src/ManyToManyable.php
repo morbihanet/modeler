@@ -87,13 +87,18 @@ namespace Morbihanet\Modeler;
       * @param Item $pivot
       * @return mixed|Item|null
       */
-     public function sync(Item $pivot)
+     public function sync(Item $pivot, array $attributes = [])
      {
          $db = $this->getPivotModel($pivot);
          [$fk1, $fk2] = $this->getPivotKeys($pivot);
 
-         return $db->firstOrCreate([$fk1 => $this['id'], $fk2 => $pivot['id']]);
+         $item = $db->firstOrCreate([$fk1 => $this['id'], $fk2 => $pivot['id']]);
 
+         if (!empty($attributes)) {
+             $item->update($attributes);
+         }
+
+         return $item;
      }
 
      public function getPivots(string $relation, ?string $fk1 = null, ?string $fk2 = null)

@@ -8,6 +8,7 @@ use ArrayIterator;
 use JsonSerializable;
 use IteratorAggregate;
 use Illuminate\Support\Str;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Enumerable;
 use Illuminate\Support\LazyCollection;
@@ -247,6 +248,57 @@ class Iterator implements IteratorAggregate
         if ($this->model instanceof Db) {
             foreach ($this as $row) {
                 $this->model->model($row)->delete();
+                ++$i;
+            }
+        }
+
+        return $i;
+    }
+
+    /**
+     * @return int
+     */
+    public function detach(Item $item): int
+    {
+        $i = 0;
+
+        if ($this->model instanceof Db) {
+            foreach ($this as $row) {
+                $this->model->model($row)->detach($item);
+                ++$i;
+            }
+        }
+
+        return $i;
+    }
+
+    /**
+     * @return int
+     */
+    public function attach(Item $item, array $attributes = []): int
+    {
+        $i = 0;
+
+        if ($this->model instanceof Db) {
+            foreach ($this as $row) {
+                $this->model->model($row)->attach($item,$attributes);
+                ++$i;
+            }
+        }
+
+        return $i;
+    }
+
+    /**
+     * @return int
+     */
+    public function sync(Item $item, array $attributes = []): int
+    {
+        $i = 0;
+
+        if ($this->model instanceof Db) {
+            foreach ($this as $row) {
+                $this->model->model($row)->sync($item,$attributes);
                 ++$i;
             }
         }
@@ -706,33 +758,32 @@ class Iterator implements IteratorAggregate
     }
 
     /**
-     * @param string $field
-     * @param $value
-     * @return $this|Iterator
+     * @param Item $item
+     * @return bool
      */
-    public function contains(string $field, $value)
+    public function contains(Item $item)
     {
-        return $this->where($field, 'like i', "%$value%");
+        $db = Core::getDb($item);
+        $fk = $db->getConcern(get_class($item)) . '_id';
+
+        foreach ($this as $row) {
+            $value = (int) $row[$fk] ?? 0;
+
+            if ($value === (int) $item->id) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
-     * @param string $field
-     * @param $value
-     * @return Iterator
+     * @param Item $item
+     * @return bool
      */
-    public function orContains(string $field, $value)
+    public function notContains(Item $item)
     {
-        return $this->orWhere($field, 'like i', "%$value%");
-    }
-
-    /**
-     * @param string $field
-     * @param $value
-     * @return $this|Iterator
-     */
-    public function notContains(string $field, $value)
-    {
-        return $this->where($field, 'not like i', "%$value%");
+        return !$this->contains($item);
     }
 
     /**
@@ -1617,5 +1668,45 @@ class Iterator implements IteratorAggregate
         $this->model = $model;
 
         return $this;
+    }
+
+    /**
+     * @param string $event
+     * @param null $concern
+     * @param bool $return
+     *
+     * @return mixed|null
+     */
+    public function fire(string $event, $concern = null, bool $return = false)
+    {
+        $methods = get_class_methods($this);
+        $method  = Str::camel('on_' . $event);
+
+        if (in_array($method, $methods)) {
+            $result = $this->{$method}($concern);
+
+            if ($return) {
+                return $result;
+            }
+        } else {
+            $observers = Core::get('itdb.observers', []);
+            $self = get_called_class();
+
+            $observer = Arr::get($observers, $self, null);
+
+            if (null !== $observer) {
+                $methods = get_class_methods($observer);
+
+                if (in_array($event, $methods)) {
+                    $result = app()->call($observer, [$event, $concern]);
+
+                    if ($return) {
+                        return $result;
+                    }
+                }
+            }
+        }
+
+        return $concern;
     }
 }

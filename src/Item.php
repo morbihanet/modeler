@@ -8,6 +8,8 @@ class Item extends Record
 {
     use ManyToManyable;
 
+    protected bool $authenticable = false;
+
     public function __construct(Db $db, array $options = [])
     {
         unset($options['__db'], $options['__original']);
@@ -31,6 +33,24 @@ class Item extends Record
     public function original()
     {
         return new self($this['__db'] ?? Core::getDb($this), $this['__original']);
+    }
+
+    /**
+     * @param Item $item
+     * @return bool
+     */
+    public function is(Item $item): bool
+    {
+        return $item->exists() && $this->exists() && $item->id === $this->id;
+    }
+
+    /**
+     * @param Item $item
+     * @return bool
+     */
+    public function isNot(Item $item): bool
+    {
+        return !$this->is($item);
     }
 
     /**
@@ -393,5 +413,13 @@ class Item extends Record
         }
 
         return $row;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isAuthenticable(): bool
+    {
+        return $this->authenticable;
     }
 }

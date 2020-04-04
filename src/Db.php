@@ -333,46 +333,6 @@ class Db
     }
 
     /**
-     * @param string $event
-     * @param null $concern
-     * @param bool $return
-     *
-     * @return mixed|null
-     */
-    public function fire(string $event, $concern = null, bool $return = false)
-    {
-        $methods = get_class_methods($this);
-        $method  = Str::camel('on_' . $event);
-
-        if (in_array($method, $methods)) {
-            $result = $this->{$method}($concern);
-
-            if ($return) {
-                return $result;
-            }
-        } else {
-            $observers = Core::get('itdb.observers', []);
-            $self = get_called_class();
-
-            $observer = Arr::get($observers, $self, null);
-
-            if (null !== $observer) {
-                $methods = get_class_methods($observer);
-
-                if (in_array($event, $methods)) {
-                    $result = app()->call($observer, [$event, $concern]);
-
-                    if ($return) {
-                        return $result;
-                    }
-                }
-            }
-        }
-
-        return $concern;
-    }
-
-    /**
      * @param string $name
      * @param array $arguments
      * @return mixed
