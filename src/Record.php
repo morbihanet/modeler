@@ -290,6 +290,14 @@ class Record implements \IteratorAggregate, \ArrayAccess, \Countable
             return $this->remove($field);
         }
 
+        if ($class = Core::get('modeler')) {
+            $model = new $class;
+
+            if (in_array($name, get_class_methods($model))) {
+                return $model->{$name}(...$arguments);
+            }
+        }
+
         return $this->collection()->{$name}(...$arguments);
     }
 

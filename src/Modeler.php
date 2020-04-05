@@ -119,16 +119,27 @@ class Modeler
     protected static $store = Store::class;
     protected bool $authenticable = false;
 
+    public function __get(string $key)
+    {
+        if ($item = Core::get('item_record')) {
+            return $item[$key] ?? null;
+        }
+
+        return null;
+    }
+
     public static function __callStatic(string $name, array $arguments)
     {
-        $model = static::getModelName(get_called_class());
+        Core::set('modeler', $class = get_called_class());
+        $model = static::getModelName($class);
 
         return static::factorModel($model)->{$name}(...$arguments);
     }
 
     public function __call(string $name, array $arguments)
     {
-        $model = static::getModelName(get_called_class());
+        Core::set('modeler', $class = get_called_class());
+        $model = static::getModelName($class);
 
         return static::factorModel($model)->{$name}(...$arguments);
     }
