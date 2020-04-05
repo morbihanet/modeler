@@ -240,18 +240,21 @@ class Modeler extends TestCase
     /** @test */
     public function it_should_be_transactionable_file()
     {
-        FileBook::beginTransaction();
+        $fileBook = new FileBook;
+        $fileBook = $fileBook->beginTransaction();
 
-        FileBook::create(['title' => 'Les Fleurs du Mal', 'year' => 1867]);
-        $this->assertEquals(1, FileBook::count());
-        FileBook::rollback();
-        $this->assertEquals(0, FileBook::count());
+        $fileBook->create(['title' => 'Les Fleurs du Mal', 'year' => 1867]);
+        $fileBook->create(['title' => 'Notre Dame de Paris', 'year' => 1831]);
+        $this->assertEquals(2, $fileBook->count());
+        $fileBook->rollback();
+        $this->assertEquals(0, $fileBook->count());
 
-        FileBook::beginTransaction();
-        FileBook::create(['title' => 'Les Fleurs du Mal', 'year' => 1867]);
-        $this->assertEquals(1, FileBook::count());
-        FileBook::commit();
-        $this->assertEquals(1, FileBook::count());
+        if ($fileBook = $fileBook->beginTransaction()) {
+            $fileBook->create(['title' => 'Les Fleurs du Mal', 'year' => 1867]);
+            $this->assertEquals(1, $fileBook->count());
+            $fileBook->commit();
+            $this->assertEquals(1, $fileBook->count());
+        }
     }
 
     /** @test */

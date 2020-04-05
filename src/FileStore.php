@@ -196,7 +196,7 @@ class FileStore extends Db
     }
 
     /**
-     * @return bool
+     * @return null|FileStore
      */
     public function beginTransaction()
     {
@@ -205,6 +205,9 @@ class FileStore extends Db
 
         if (!is_dir($this->__prefix)) {
             app('files')->makeDirectory($this->__prefix, 0777);
+        } else {
+            app('files')->deleteDirectory($this->__prefix);
+            app('files')->makeDirectory($this->__prefix, 0777);
         }
 
         $copy = app('files')->copyDirectory($this->__prefix, $transactionalDir);
@@ -212,10 +215,10 @@ class FileStore extends Db
         if (true === $copy) {
             $this->__prefix = $transactionalDir;
 
-            return true;
+            return $this;
         }
 
-        return false;
+        return null;
     }
 
     /**
@@ -226,8 +229,8 @@ class FileStore extends Db
         $nativePrefix = str_replace('__trx', '', $this->__prefix);
 
         $delete = app('files')->deleteDirectory($nativePrefix);
-        $copy = app('files')->copyDirectory($this->__prefix, $nativePrefix);
-        $clean = app('files')->deleteDirectory($this->__prefix);
+        $copy   = app('files')->copyDirectory($this->__prefix, $nativePrefix);
+        $clean  = app('files')->deleteDirectory($this->__prefix);
 
         $this->__prefix = $nativePrefix;
 
@@ -250,7 +253,6 @@ class FileStore extends Db
     {
         app('files')->deleteDirectory(config('modeler.file_dir'));
     }
-
 
     /**
      * @return bool

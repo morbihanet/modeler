@@ -2,8 +2,7 @@
 namespace Morbihanet\Modeler;
 
 use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Facade;
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Arr;
 
 /**
  * @method static Item|Iterator findOrFail($id)
@@ -107,7 +106,7 @@ use Illuminate\Database\Eloquent\Collection;
  * @method static string implode($value, $glue = null)
  * @method static Iterator chunk(int $size)
  * @method static Macro factory(?callable $callable = null)
- * @method static bool beginTransaction()
+ * @method static FileStore|null|bool beginTransaction()
  * @method static bool commit()
  * @method static bool rollback()
  * @method static mixed transaction(\Closure $callback, int $attempts = 1)
@@ -115,15 +114,23 @@ use Illuminate\Database\Eloquent\Collection;
  * @see Iterator
  */
 
-class Modeler extends Facade
+class Modeler
 {
     protected static $store = Store::class;
-    protected static $caches = [];
     protected bool $authenticable = false;
 
-    protected static function getFacadeAccessor()
+    public static function __callStatic(string $name, array $arguments)
     {
-        return static::factorModel(class_basename(get_called_class()));
+        $model = static::getModelName(get_called_class());
+
+        return static::factorModel($model)->{$name}(...$arguments);
+    }
+
+    public function __call(string $name, array $arguments)
+    {
+        $model = static::getModelName(get_called_class());
+
+        return static::factorModel($model)->{$name}(...$arguments);
     }
 
     public static function setStore(string $store)
@@ -131,19 +138,42 @@ class Modeler extends Facade
         static::$store = $store;
     }
 
-    public static function factorModel(string $model)
+    /**
+     * @return Db
+     */
+    public function getDb(): Db
     {
-        if (isset(static::$caches[$model])) {
-            return static::$caches[$model];
+        return static::factorModel(static::getModelName(get_called_class()));
+    }
+
+    public static function getModelName(string $model)
+    {
+        if (fnmatch('*_*_*', $model)) {
+            $dashes = explode('_', $model);
+            $parts  = explode('_', $model, count($dashes) - 1);
+            $suffix = array_shift($parts);
+            $part   = array_pop($parts);
+            $part   = str_replace($suffix, '', $part);
+
+            return ucfirst(Str::camel(Str::lower($suffix) . '_' . $part));
         }
 
+        return Str::lower(Core::uncamelize(Arr::last(explode('\\', $model))));
+    }
+
+    /**
+     * @param string $model
+     * @return Db
+     */
+    public static function factorModel(string $model)
+    {
         $model = ucfirst(Str::camel(str_replace('.', '\\_', $model)));
         $namespace = config('modeler.model_class', 'DB\\Models');
 
         $class = $namespace . '\\' . $model;
 
         if (class_exists($class)) {
-            return static::$caches[$model] = new $class;
+            return new $class;
         }
 
         $code = 'namespace ' . $namespace . ';';
@@ -160,6 +190,6 @@ class Modeler extends Facade
 
         eval($code);
 
-        return static::$caches[$model] = new $class;
+        return new $class;
     }
 }

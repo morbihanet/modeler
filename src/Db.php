@@ -871,8 +871,11 @@ class Db
             ->sort()->implode('');
 
         if (fnmatch('*_*_*', $pivotName)) {
-            [$suffix, $part] = explode('_', $pivotName, 2);
-            $part = str_replace($suffix, '', $part);
+            $dashes = explode('_', $pivotName);
+            $parts  = explode('_', $pivotName, count($dashes) - 1);
+            $suffix = array_shift($parts);
+            $part   = array_pop($parts);
+            $part   = str_replace($suffix, '', $part);
 
             $pivotName = ucfirst(Str::camel(Str::lower($suffix) . '_' . $part));
         }
