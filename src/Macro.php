@@ -53,7 +53,7 @@ class Macro implements ArrayAccess
      */
     public static function __instance(string $namespace): self
     {
-        if (!static::$instances[$namespace]) {
+        if (!isset(static::$instances[$namespace])) {
             static::$instances[$namespace] = new static($namespace);
         }
 

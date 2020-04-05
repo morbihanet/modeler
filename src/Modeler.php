@@ -106,7 +106,6 @@ use Faker\Generator as Faker;
  * @method static Modeler select(...$fields)
  * @method static string implode($value, $glue = null)
  * @method static Iterator chunk(int $size)
- * @method static Macro factory(?callable $callable = null)
  * @method static FileStore|null|bool beginTransaction()
  * @method static bool commit()
  * @method static bool rollback()
@@ -152,9 +151,9 @@ class Modeler
 
     /**
      * @param callable|null $callable
-     * @return Macro
+     * @return Factory
      */
-    public static function factory(?callable $callable = null)
+    public static function factory(?callable $callable = null): Macro
     {
         $db = static::getDb();
         $factory = Macro::__instance('it_factory_' . get_class($db));
@@ -191,7 +190,7 @@ class Modeler
             for ($i = 0; $i < $factory->_times; ++$i) {
                 $row = is_callable($callable) ? $callable($faker ?? Core::faker()) : static::seeder($faker ??
                     Core::faker());
-                $collection[] = $this->model(array_merge($row, $attrs))->save();
+                $collection[] = $db->model(array_merge($row, $attrs))->save();
             }
 
             if (true === $toCollection) {
@@ -211,10 +210,10 @@ class Modeler
     }
 
     /**
-     * @param Faker|null $faker
+     * @param Faker $faker
      * @return array
      */
-    protected static function seeder(?Faker $faker = null)
+    protected static function seeder(Faker $faker)
     {
         return [];
     }
@@ -222,7 +221,7 @@ class Modeler
     /**
      * @return Db
      */
-    public function getDb(): Db
+    public static function getDb(): Db
     {
         return static::factorModel(static::getModelName(get_called_class()));
     }
