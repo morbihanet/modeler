@@ -3,6 +3,7 @@ namespace Morbihanet\Modeler;
 
 use Illuminate\Support\Str;
 use Illuminate\Support\Arr;
+use Faker\Generator as Faker;
 
 /**
  * @method static Item|Iterator findOrFail($id)
@@ -147,6 +148,75 @@ class Modeler
     public static function setStore(string $store)
     {
         static::$store = $store;
+    }
+
+    /**
+     * @param callable|null $callable
+     * @return Macro
+     */
+    public static function factory(?callable $callable = null)
+    {
+        $db = static::getDb();
+        $factory = Macro::__instance('it_factory_' . get_class($db));
+
+        $factory->_times = 1;
+
+        $factory->new('times', function (int $t = 1) use ($factory) {
+            $factory->_times = $t;
+
+            return $factory;
+        })->new('make', function (array $attrs = [], bool $toCollection = false, ?Faker $faker = null) use ($factory, $callable, $db) {
+            $collection = [];
+
+            for ($i = 0; $i < $factory->_times; ++$i) {
+                $row = is_callable($callable) ? $callable($faker ?? Core::faker()) : static::seeder($faker ??
+                    Core::faker());
+                $collection[] = $db->model(array_merge($row, $attrs));
+            }
+
+            if (true === $toCollection) {
+                $cb = function () use ($collection) {
+                    foreach ($collection as $row) {
+                        yield $row;
+                    }
+                };
+
+                return $db->setEngine(Core::iterator($cb)->setModel($db));
+            }
+
+            return $collection;
+        })->new('create', function (array $attrs = [], bool $toCollection = false, ?Faker $faker = null) use ($factory, $callable, $db) {
+            $collection = [];
+
+            for ($i = 0; $i < $factory->_times; ++$i) {
+                $row = is_callable($callable) ? $callable($faker ?? Core::faker()) : static::seeder($faker ??
+                    Core::faker());
+                $collection[] = $this->model(array_merge($row, $attrs))->save();
+            }
+
+            if (true === $toCollection) {
+                $cb = function () use ($collection) {
+                    foreach ($collection as $row) {
+                        yield $row;
+                    }
+                };
+
+                return $db->setEngine(Core::iterator($cb)->setModel($db));
+            }
+
+            return $collection;
+        });
+
+        return $factory;
+    }
+
+    /**
+     * @param Faker|null $faker
+     * @return array
+     */
+    protected static function seeder(?Faker $faker = null)
+    {
+        return [];
     }
 
     /**
