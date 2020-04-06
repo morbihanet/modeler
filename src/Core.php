@@ -70,6 +70,10 @@ class Core
         return Factory::create(config('faker.language', $lng));
     }
 
+    /**
+     * @param string $namespace
+     * @return Cache
+     */
     public static function dyndb(string $namespace = 'core')
     {
         static $dbs = [];

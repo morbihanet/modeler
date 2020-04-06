@@ -7,7 +7,7 @@ use ArrayAccess;
 use Illuminate\Support\Str;
 use Illuminate\Support\Collection;
 use Illuminate\Contracts\Cache\Store;
-use Morbihanet\Modeler\Store as Driver;
+use Morbihanet\Modeler\Warehouse as Driver;
 use Illuminate\Support\Traits\Macroable;
 
 class Cache implements Store, ArrayAccess, Countable
@@ -623,5 +623,16 @@ class Cache implements Store, ArrayAccess, Countable
             e integer default '0' not null,
             called_at text null
         )");
+    }
+
+    /**
+     * @param Warehouse $store
+     * @return Cache
+     */
+    public function setStore($store): Cache
+    {
+        $this->store = $store;
+
+        return $this;
     }
 }
