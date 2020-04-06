@@ -74,7 +74,7 @@ class Core
     {
         static $dbs = [];
 
-        if (!$db = isAke($dbs, $namespace)) {
+        if (!$db = Arr::get($dbs, $namespace)) {
             $db = new Cache($namespace);
             $dbs[$namespace] = $db;
         }
@@ -593,7 +593,7 @@ class Core
 
     /**
      * @param $item
-     * @return Db
+     * @return Store|FileStore|RedisStore|MemoryStore
      */
     public static function getDb($item)
     {

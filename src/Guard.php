@@ -9,7 +9,8 @@ use Illuminate\Support\Facades\Facade;
  * @method static Item|null user()
  * @method static Item|null login(string $username, string $password)
  * @method static void logout()
- * @method static bool be(string ...$roles)
+ * @method static bool is(string ...$roles)
+ * @method static bool authorize(string $policy, Item $item)
  * @method static mixed|Session getSession()
  * @method static Db getDb()
  * @method static Auth setSession(&$session)
@@ -27,7 +28,11 @@ class Guard extends Facade
         $session = Core::session();
         $model = $session->getUserModel();
 
-        return Auth::getInstance($session, new $model());
+        $auth = Auth::getInstance($session, new $model());
+
+        Core::set('guard', $auth);
+
+        return $auth;
     }
 
     /**

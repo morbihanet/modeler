@@ -3,6 +3,7 @@ namespace Morbihanet\Modeler;
 
 use Closure;
 use stdClass;
+use Exception;
 use Traversable;
 use ArrayIterator;
 use JsonSerializable;
@@ -16,6 +17,29 @@ use Illuminate\Support\Traits\Macroable;
 use Illuminate\Contracts\Support\Jsonable;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+
+/**
+ * @property-read Proxy $average
+ * @property-read Proxy $avg
+ * @property-read Proxy $contains
+ * @property-read Proxy $each
+ * @property-read Proxy $every
+ * @property-read Proxy $filter
+ * @property-read Proxy $first
+ * @property-read Proxy $flatMap
+ * @property-read Proxy $groupBy
+ * @property-read Proxy $keyBy
+ * @property-read Proxy $map
+ * @property-read Proxy $max
+ * @property-read Proxy $min
+ * @property-read Proxy $partition
+ * @property-read Proxy $reject
+ * @property-read Proxy $some
+ * @property-read Proxy $sortBy
+ * @property-read Proxy $sortByDesc
+ * @property-read Proxy $sum
+ * @property-read Proxy $unique
+ */
 
 class Iterator implements IteratorAggregate
 {
@@ -31,6 +55,13 @@ class Iterator implements IteratorAggregate
 
     /** @var array */
     protected static $queries = [];
+
+    /** @var array */
+    protected static $proxies = [
+        'average', 'avg', 'contains', 'each', 'every', 'filter', 'first',
+        'flatMap', 'groupBy', 'keyBy', 'map', 'max', 'min', 'partition',
+        'reject', 'some', 'sortBy', 'sortByDesc', 'sum', 'unique',
+    ];
 
     public function __construct($scope = null)
     {
@@ -112,6 +143,40 @@ class Iterator implements IteratorAggregate
         }
 
         return iterator_to_array($this->getIterator());
+    }
+
+    public function toJson(int $option = JSON_PRETTY_PRINT): string
+    {
+        return json_encode($this->toArray(), $option);
+    }
+
+    public function __toString()
+    {
+        return $this->toJson();
+    }
+
+    /**
+     * @param  string  $method
+     * @return void
+     */
+    public static function proxy(string $method): void
+    {
+        static::$proxies[] = $method;
+    }
+
+    /**
+     * @param  string  $key
+     * @return mixed
+     *
+     * @throws \Exception
+     */
+    public function __get($key)
+    {
+        if (!in_array($key, static::$proxies)) {
+            throw new Exception("Property [{$key}] does not exist on this iterator instance.");
+        }
+
+        return new Proxy($this, $key);
     }
 
     /**
@@ -450,7 +515,7 @@ class Iterator implements IteratorAggregate
             return $this->take($perPage);
         }
 
-        return $this->skip(($page - 1) * $perPage)->take($perPage);
+        return $this->slice(max(0, ($page - 1) * $perPage), $perPage);
     }
 
     /**

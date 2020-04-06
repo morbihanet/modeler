@@ -12,7 +12,7 @@ class Auth
     protected $session;
 
     /**
-     * @var Db
+     * @var Modeler
      */
     protected $db;
 
@@ -66,6 +66,25 @@ class Auth
         return null === $this->user();
     }
 
+    public function authorize(string $policy, Item $item)
+    {
+        if ($this->isAuth()) {
+            /** @var Modeler $modeler */
+            $modeler = Core::get('modeler');
+            $policies = $modeler::policies();
+
+            if (!empty($policies)) {
+                $thisPolicy = Arr::get($policies, $policy);
+
+                if (is_callable($thisPolicy)) {
+                    return $thisPolicy($this->user(), $item);
+                }
+            }
+        }
+
+        return false;
+    }
+
     /**
      * @return Item|null
      */
@@ -108,6 +127,23 @@ class Auth
     }
 
     /**
+     * @param int $id
+     * @return Item|null
+     */
+    public function loginWithId(int $id): ?Item
+    {
+        $user = $this->db::find($id);
+
+        if ($user) {
+            $this->session['auth'] = $user->id;
+
+            return $user;
+        }
+
+        return null;
+    }
+
+    /**
      * @param string ...$roles
      * @return bool
      */
@@ -116,7 +152,7 @@ class Auth
         if ($user = $this->user()) {
             $userRoles = $user->roles ?? [];
 
-            if ($userRoles instanceof Iterator) {
+            if (Core::arrayable($userRoles)) {
                 foreach ($userRoles as $userRole) {
                     foreach ($roles as $role) {
                         if ($userRole->name === $role) {

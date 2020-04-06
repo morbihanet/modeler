@@ -109,7 +109,29 @@ use Faker\Generator as Faker;
  * @method static FileStore|null|bool beginTransaction()
  * @method static bool commit()
  * @method static bool rollback()
+ * @method static string toJson()
+ * @method static void proxy(string $method)
  * @method static mixed transaction(\Closure $callback, int $attempts = 1)
+ * @property-read Proxy $average
+ * @property-read Proxy $avg
+ * @property-read Proxy $contains
+ * @property-read Proxy $each
+ * @property-read Proxy $every
+ * @property-read Proxy $filter
+ * @property-read Proxy $first
+ * @property-read Proxy $flatMap
+ * @property-read Proxy $groupBy
+ * @property-read Proxy $keyBy
+ * @property-read Proxy $map
+ * @property-read Proxy $max
+ * @property-read Proxy $min
+ * @property-read Proxy $partition
+ * @property-read Proxy $reject
+ * @property-read Proxy $some
+ * @property-read Proxy $sortBy
+ * @property-read Proxy $sortByDesc
+ * @property-read Proxy $sum
+ * @property-read Proxy $unique
  *
  * @see Iterator
  */
@@ -213,15 +235,23 @@ class Modeler
      * @param Faker $faker
      * @return array
      */
-    protected static function seeder(Faker $faker)
+    protected static function seeder(Faker $faker): array
     {
         return [];
     }
 
     /**
-     * @return Db
+     * @return array
      */
-    public static function getDb(): Db
+    protected static function policies(): array
+    {
+        return [];
+    }
+
+    /**
+     * @return Store|FileStore|RedisStore|MemoryStore
+     */
+    public static function getDb()
     {
         return static::factorModel(static::getModelName(get_called_class()));
     }
@@ -243,7 +273,7 @@ class Modeler
 
     /**
      * @param string $model
-     * @return Db
+     * @return Store|FileStore|RedisStore|MemoryStore
      */
     public static function factorModel(string $model)
     {
