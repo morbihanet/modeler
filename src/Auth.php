@@ -17,6 +17,7 @@ class Auth
     protected $db;
 
     protected static $instances = [];
+    protected $old_user = null;
 
     /**
      * @param $session
@@ -26,6 +27,22 @@ class Auth
     {
         $this->session = &$session;
         $this->db = $db;
+    }
+
+    public function __destruct()
+    {
+        if (null !== $this->old_user) {
+            $this->loginWithId($this->old_user);
+        }
+    }
+
+    public function forUser($user)
+    {
+        if ($olduser = $this->user()) {
+            $this->old_user = $olduser->id;
+        }
+
+        return $this->loginWithId($user->id);
     }
 
     /**
