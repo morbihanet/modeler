@@ -955,7 +955,7 @@ class Db
                 $methods = get_class_methods($observer);
 
                 if (in_array($event, $methods)) {
-                    $result = app()->call($observer, [$event, $concern]);
+                    $result = (new $observer)->{$event}($concern);
 
                     if ($return) {
                         return $result;
