@@ -3,6 +3,7 @@
 namespace Morbihanet\Modeler\Test;
 
 use Morbihanet\Modeler\Redis;
+use Morbihanet\Modeler\Database;
 use Morbihanet\Modeler\FileStore;
 use Morbihanet\Modeler\MemoryStore;
 use Illuminate\Database\Schema\Blueprint;
@@ -16,6 +17,19 @@ abstract class TestCase extends Orchestra
         parent::setUp();
         $this->setUpDatabase();
         Redis::engine(new Mock);
+
+        $this->app['config']->set('database.connections.db_memory', [
+            'driver'    => 'sqlite',
+            'database'  => ':memory:',
+            'prefix'    => '',
+        ]);
+
+        $this->app['db']->connection('db_memory')->getSchemaBuilder()->create('kv', function (Blueprint $table) {
+            $table->string('k')->primary()->unique();
+            $table->longText('v')->nullable();
+            $table->unsignedBigInteger('e')->index()->default(0);
+            $table->timestamp('called_at')->nullable()->useCurrent();
+        });
 
         if (!is_dir(__DIR__ . '/data')) {
             mkdir(__DIR__ . '/data', 0777);

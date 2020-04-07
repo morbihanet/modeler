@@ -296,6 +296,8 @@ class Modeler
             $code .= 'class ' . $model . ' extends \\Morbihanet\\Modeler\\MemoryStore {}';
         } else if (static::$store === FileStore::class) {
             $code .= 'class ' . $model . ' extends \\Morbihanet\\Modeler\\FileStore {}';
+        } else if (static::$store === LiteStore::class) {
+            $code .= 'class ' . $model . ' extends \\Morbihanet\\Modeler\\LiteStore {}';
         }
 
         eval($code);

@@ -4,6 +4,13 @@ namespace Morbihanet\Modeler\Test;
 class Modeler extends TestCase
 {
     /** @test */
+    public function it_should_be_empty_lite()
+    {
+        $this->assertEquals(0, LiteBook::count());
+        $this->assertTrue(LiteBook::notExists());
+    }
+
+    /** @test */
     public function it_should_be_empty()
     {
         $this->assertEquals(0, Book::count());
@@ -37,6 +44,14 @@ class Modeler extends TestCase
         Book::create(['title' => 'Les Fleurs du Mal', 'year' => 1867]);
         $this->assertEquals(1, Book::count());
         $this->assertTrue(Book::exists());
+    }
+
+    /** @test */
+    public function it_should_be_not_empty_lite()
+    {
+        LiteBook::create(['title' => 'Les Fleurs du Mal', 'year' => 1867]);
+        $this->assertEquals(1, LiteBook::count());
+        $this->assertTrue(LiteBook::exists());
     }
 
     /** @test */
@@ -78,6 +93,23 @@ class Modeler extends TestCase
 
         Book::where('title', 'like', '%Mal%')->update(['title' => 'Les Fleurs du Mal']);
         $this->assertEquals('Les Fleurs du Mal', Book::first()->title);
+    }
+
+    /** @test */
+    public function it_should_be_updatable_lite()
+    {
+        LiteBook::create(['title' => 'Les Fleurs du Mal', 'year' => 1867]);
+
+        LiteBook::first()->update(['title' => 'Fleurs du Mal']);
+        $this->assertEquals('Fleurs du Mal', LiteBook::first()->title);
+
+        $row = LiteBook::first();
+        $row->title = 'Des Fleurs du Mal';
+        $row->save();
+        $this->assertEquals('Des Fleurs du Mal', LiteBook::first()->title);
+
+        LiteBook::where('title', 'like', '%Mal%')->update(['title' => 'Les Fleurs du Mal']);
+        $this->assertEquals('Les Fleurs du Mal', LiteBook::first()->title);
     }
 
     /** @test */
@@ -147,6 +179,24 @@ class Modeler extends TestCase
         Book::create(['title' => 'Notre Dame de Paris', 'year' => 1831]);
         Book::destroy();
         $this->assertEquals(0, Book::count());
+    }
+
+    /** @test */
+    public function it_should_be_deletable_lite()
+    {
+        LiteBook::create(['title' => 'Les Fleurs du Mal', 'year' => 1867]);
+        LiteBook::create(['title' => 'Notre Dame de Paris', 'year' => 1831]);
+        $this->assertEquals(2, LiteBook::count());
+
+        LiteBook::first()->delete();
+        $this->assertEquals(1, LiteBook::count());
+        LiteBook::where('title', 'Notre Dame de Paris')->destroy();
+        $this->assertEquals(0, LiteBook::count());
+
+        LiteBook::create(['title' => 'Les Fleurs du Mal', 'year' => 1867]);
+        LiteBook::create(['title' => 'Notre Dame de Paris', 'year' => 1831]);
+        LiteBook::destroy();
+        $this->assertEquals(0, LiteBook::count());
     }
 
     /** @test */
