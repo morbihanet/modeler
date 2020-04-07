@@ -183,10 +183,7 @@ class Db
      */
     public function model(array $data = []): Item
     {
-        $model = Core::model($this, $data);
-        $this->fire('model', $model);
-
-        return $model;
+        return $this->fire('model', Core::model($this, $data));
     }
 
     /**
