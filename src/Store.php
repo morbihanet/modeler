@@ -18,6 +18,13 @@ class Store extends Db
         /** @var Builder $store */
         $this->__store = $store = (new Warehouse)->setNamespace($prefix);
 
+        /** @var Modeler $modeler */
+        $modeler = Core::get('modeler');
+
+        if ('default' !== $modeler::$connection) {
+            $this->__store->setConnection($modeler::$connection);
+        }
+
         $db = function () use ($store) {
             $rows = $store->select('v')->where('k', 'like', $store->getNamespace() . '.row.%')->cursor();
 

@@ -138,8 +138,38 @@ use Faker\Generator as Faker;
 
 class Modeler
 {
-    protected static $store = Store::class;
+    protected static string $store = Store::class;
+    public static string $connection = 'default';
+    protected static array $booted = [];
     protected bool $authenticable = false;
+
+    public function __construct()
+    {
+        Core::set('modeler', $class = get_called_class());
+
+        $hasBooted = isset(static::$booted[get_called_class()]);
+
+        if (!$hasBooted) {
+            static::boot();
+        }
+    }
+
+    /**
+     * @param string $observerClass
+     * @return Db|FileStore|MemoryStore|RedisStore|Store
+     */
+    public static function observe(string $observerClass)
+    {
+        Core::set('modeler', $class = get_called_class());
+        $model = static::getModelName($class);
+
+        return static::factorModel($model)->observe($observerClass);
+    }
+
+    protected static function boot()
+    {
+        //
+    }
 
     public function __get(string $key)
     {
