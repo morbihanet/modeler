@@ -7,5 +7,5 @@ use Morbihanet\Modeler\MemoryStore;
 
 class MemoryAuthor extends Modeler
 {
-    protected static $store = MemoryStore::class;
+    protected static string $store = MemoryStore::class;
 }

@@ -8,5 +8,5 @@ use Morbihanet\Modeler\LiteStore;
 
 class LiteBook extends Modeler
 {
-    protected static $store = LiteStore::class;
+    protected static string $store = LiteStore::class;
 }

@@ -7,5 +7,5 @@ use Morbihanet\Modeler\FileStore;
 
 class FileAuthor extends Modeler
 {
-    protected static $store = FileStore::class;
+    protected static string $store = FileStore::class;
 }

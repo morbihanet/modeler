@@ -7,5 +7,5 @@ use Morbihanet\Modeler\RedisStore;
 
 class RedisTag extends Modeler
 {
-    protected static $store = RedisStore::class;
+    protected static string $store = RedisStore::class;
 }

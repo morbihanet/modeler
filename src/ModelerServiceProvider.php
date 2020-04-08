@@ -1,6 +1,7 @@
 <?php
 namespace Morbihanet\Modeler;
 
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 
 class ModelerServiceProvider extends ServiceProvider
@@ -9,6 +10,13 @@ class ModelerServiceProvider extends ServiceProvider
     {
         $this->registerMigrations();
         $this->registerPublishing();
+
+        Route::get(config('modeler.scheduler_route', '/modeler/scheduler/cron'), function () {
+            set_time_limit(0);
+            Scheduler::run();
+
+            return response()->json(['status' => 'OK']);
+        });
     }
 
     private function registerMigrations()
