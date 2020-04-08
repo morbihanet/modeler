@@ -51,10 +51,17 @@ class Scheduler
         return $event;
     }
 
-    public static function run()
+    /**
+     * @return int
+     */
+    public static function run(): int
     {
+        $done = 0;
+
         if (static::shouldRun()) {
             set_time_limit(0);
+
+            $success = $fails = 0;
 
             /** @var Scheduler $event */
             foreach (static::$events as $event) {
@@ -62,10 +69,21 @@ class Scheduler
                     $callback = $event->getCallback();
                     $parameters = $event->getParameters();
 
-                    $callback(...$parameters);
+                    try {
+                        $callback(...$parameters);
+                        ++$success;
+                    } catch (\Exception $e) {
+                        ++$fails;
+                    }
+
+                    ++$done;
                 }
             }
+
+            Schedule::create(compact('success', 'fails'));
         }
+
+        return $done;
     }
 
     /**

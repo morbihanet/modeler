@@ -13,9 +13,9 @@ class ModelerServiceProvider extends ServiceProvider
 
         Route::get(config('modeler.scheduler_route', '/modeler/scheduler/cron'), function () {
             set_time_limit(0);
-            Scheduler::run();
+            $done = Scheduler::run();
 
-            return response()->json(['status' => 'OK']);
+            return response()->json(['status' => 'OK', 'done' => $done]);
         });
     }
 
