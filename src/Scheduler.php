@@ -394,13 +394,20 @@ class Scheduler
      * @param  string  $value
      * @return $this
      */
-    protected function spliceIntoPosition($position, $value)
+    protected function spliceIntoPosition(int $position, string $value)
     {
         $segments = explode(' ', $this->expression);
 
         $segments[$position - 1] = $value;
 
         return $this->cron(implode(' ', $segments));
+    }
+
+    public function cron($expression)
+    {
+        $this->expression = $expression;
+
+        return $this;
     }
 
     protected function isDue()
