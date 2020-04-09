@@ -1,33 +1,39 @@
 <?php
 namespace Morbihanet\Modeler;
 
+use Closure;
+use ArrayAccess;
 use Cron\CronExpression;
 use Illuminate\Support\Carbon;
 
-class Scheduler
+class Scheduler implements ArrayAccess
 {
-    /**
-     * @var string
-     */
+    /** @var string */
     protected $expression = '* * * * *';
 
-    /**
-     * @var \DateTimeZone|string
-     */
+    /** @var bool */
+    protected bool $everyFifteenSeconds = false;
+
+    /** @var bool */
+    protected bool $everyThirtySeconds = false;
+
+    /** @var bool */
+    protected bool $everyFortyFiveSeconds = false;
+
+    /** @var \DateTimeZone|string */
     protected $timezone;
 
     /** @var array */
     protected static array $events = [];
 
-    /**
-     * @var callable
-     */
+    /** @var callable */
     protected $callback;
 
-    /**
-     * @var array
-     */
+    /** @var array */
     protected array $parameters;
+
+    /** @var Item|null */
+    protected ?Item $user = null;
 
     /**
      * @param callable $callback
@@ -56,46 +62,65 @@ class Scheduler
      */
     public static function run(): int
     {
+        set_time_limit(0);
         $done = 0;
 
-        if (static::shouldRun()) {
-            set_time_limit(0);
+        $success = $fails = 0;
 
-            $success = $fails = 0;
+        /** @var Scheduler $event */
+        foreach (static::$events as $event) {
+            if (static::shouldRun($event)) {
+                $callback = $event->getCallback();
+                $parameters = $event->getParameters();
 
-            /** @var Scheduler $event */
-            foreach (static::$events as $event) {
-                if ($event->isDue()) {
-                    $callback = $event->getCallback();
-                    $parameters = $event->getParameters();
-
-                    try {
-                        $callback(...$parameters);
-                        ++$success;
-                    } catch (\Exception $e) {
-                        ++$fails;
-                    }
-
-                    ++$done;
+                try {
+                    $callback(...array_merge([$event], $parameters));
+                    ++$success;
+                } catch (\Exception $e) {
+                    ++$fails;
                 }
-            }
 
-            Schedule::create(compact('success', 'fails'));
+                ++$done;
+            }
+        }
+
+        if (0 < $done) {
+            Schedule::firstOrCreate(['name' => 'cron'])->update(compact('success', 'fails'));
         }
 
         return $done;
     }
 
+    public function __get(string $key)
+    {
+        return Core::get('scheduler_' . $key);
+    }
+
+    public function __set(string $key, $value)
+    {
+        Core::set('scheduler_' . $key, $value);
+    }
+
+    public function __isset(string $key)
+    {
+        return Core::has('scheduler_' . $key);
+    }
+
+    public function __unset(string $key)
+    {
+        return Core::delete('scheduler_' . $key);
+    }
+
     /**
+     * @param Scheduler $event
      * @return bool
      */
-    protected static function shouldRun(): bool
+    public static function shouldRun(Scheduler $event): bool
     {
-        $last = Schedule::latest()->first();
-        $notEmpty = !empty(static::$events);
+        $last = Schedule::whereName('cron')->first();
 
         if (!$last) {
-            return $notEmpty;
+            return true;
         }
 
         /** @var \Carbon\Carbon $date */
@@ -103,10 +128,20 @@ class Scheduler
 
         $diff = time() - $date->timestamp;
 
-        return $notEmpty && $diff >= 60;
+        if ($event->isEveryFifteenSeconds() || $event->isEveryThirtySeconds() || $event->isEveryFortyFiveSeconds()) {
+            if ($event->isEveryFifteenSeconds()) {
+                return $diff >= 15;
+            } else if ($event->isEveryThirtySeconds()) {
+                return $diff >= 30;
+            } else if ($event->isEveryFortyFiveSeconds()) {
+                return $diff >= 45;
+            }
+        }
+
+        return $event->isDue() && $diff >= 60;
     }
 
-    public function user($user)
+    public function user(Item $user): self
     {
         $this->user = $user;
 
@@ -116,7 +151,49 @@ class Scheduler
     /**
      * @return $this
      */
-    public function everyMinute()
+    public function everyFifteenSeconds(): self
+    {
+        $this->everyFifteenSeconds = true;
+        $this->everyThirtySeconds = false;
+        $this->everyFortyFiveSeconds = false;
+
+        $this->expression = '* * * * *';
+
+        return $this;
+    }
+
+    /**
+     * @return $this
+     */
+    public function everyThirtySeconds(): self
+    {
+        $this->everyThirtySeconds = true;
+        $this->everyFifteenSeconds = false;
+        $this->everyFortyFiveSeconds = false;
+
+        $this->expression = '* * * * *';
+
+        return $this;
+    }
+
+    /**
+     * @return $this
+     */
+    public function everyFortyFiveSeconds(): self
+    {
+        $this->everyFortyFiveSeconds = true;
+        $this->everyThirtySeconds = false;
+        $this->everyFifteenSeconds = false;
+
+        $this->expression = '* * * * *';
+
+        return $this;
+    }
+
+    /**
+     * @return $this
+     */
+    public function everyMinute(): self
     {
         return $this->spliceIntoPosition(1, '*');
     }
@@ -124,7 +201,7 @@ class Scheduler
     /**
      * @return $this
      */
-    public function everyFiveMinutes()
+    public function everyFiveMinutes(): self
     {
         return $this->spliceIntoPosition(1, '*/5');
     }
@@ -132,7 +209,7 @@ class Scheduler
     /**
      * @return $this
      */
-    public function everyTenMinutes()
+    public function everyTenMinutes(): self
     {
         return $this->spliceIntoPosition(1, '*/10');
     }
@@ -140,7 +217,7 @@ class Scheduler
     /**
      * @return $this
      */
-    public function everyFifteenMinutes()
+    public function everyFifteenMinutes(): self
     {
         return $this->spliceIntoPosition(1, '*/15');
     }
@@ -148,7 +225,7 @@ class Scheduler
     /**
      * @return $this
      */
-    public function everyThirtyMinutes()
+    public function everyThirtyMinutes(): self
     {
         return $this->spliceIntoPosition(1, '0,30');
     }
@@ -156,7 +233,7 @@ class Scheduler
     /**
      * @return $this
      */
-    public function hourly()
+    public function hourly(): self
     {
         return $this->spliceIntoPosition(1, 0);
     }
@@ -165,7 +242,7 @@ class Scheduler
      * @param  array|int  $offset
      * @return $this
      */
-    public function hourlyAt($offset)
+    public function hourlyAt($offset): self
     {
         $offset = is_array($offset) ? implode(',', $offset) : $offset;
 
@@ -175,7 +252,7 @@ class Scheduler
     /**
      * @return $this
      */
-    public function daily()
+    public function daily(): self
     {
         return $this->spliceIntoPosition(1, 0)
             ->spliceIntoPosition(2, 0);
@@ -185,7 +262,7 @@ class Scheduler
      * @param  string  $time
      * @return $this
      */
-    public function at($time)
+    public function at(string $time): self
     {
         return $this->dailyAt($time);
     }
@@ -194,7 +271,7 @@ class Scheduler
      * @param  string  $time
      * @return $this
      */
-    public function dailyAt($time)
+    public function dailyAt(string $time): self
     {
         $segments = explode(':', $time);
 
@@ -207,7 +284,7 @@ class Scheduler
      * @param  int  $second
      * @return $this
      */
-    public function twiceDaily($first = 1, $second = 13)
+    public function twiceDaily(int $first = 1, int $second = 13): self
     {
         $hours = $first.','.$second;
 
@@ -218,7 +295,7 @@ class Scheduler
     /**
      * @return $this
      */
-    public function weekdays()
+    public function weekdays(): self
     {
         return $this->spliceIntoPosition(5, '1-5');
     }
@@ -226,7 +303,7 @@ class Scheduler
     /**
      * @return $this
      */
-    public function weekends()
+    public function weekends(): self
     {
         return $this->spliceIntoPosition(5, '0,6');
     }
@@ -234,7 +311,7 @@ class Scheduler
     /**
      * @return $this
      */
-    public function mondays()
+    public function mondays(): self
     {
         return $this->days(1);
     }
@@ -242,7 +319,7 @@ class Scheduler
     /**
      * @return $this
      */
-    public function tuesdays()
+    public function tuesdays(): self
     {
         return $this->days(2);
     }
@@ -250,7 +327,7 @@ class Scheduler
     /**
      * @return $this
      */
-    public function wednesdays()
+    public function wednesdays(): self
     {
         return $this->days(3);
     }
@@ -258,7 +335,7 @@ class Scheduler
     /**
      * @return $this
      */
-    public function thursdays()
+    public function thursdays(): self
     {
         return $this->days(4);
     }
@@ -266,7 +343,7 @@ class Scheduler
     /**
      * @return $this
      */
-    public function fridays()
+    public function fridays(): self
     {
         return $this->days(5);
     }
@@ -274,7 +351,7 @@ class Scheduler
     /**
      * @return $this
      */
-    public function saturdays()
+    public function saturdays(): self
     {
         return $this->days(6);
     }
@@ -282,7 +359,7 @@ class Scheduler
     /**
      * @return $this
      */
-    public function sundays()
+    public function sundays(): self
     {
         return $this->days(0);
     }
@@ -290,7 +367,7 @@ class Scheduler
     /**
      * @return $this
      */
-    public function weekly()
+    public function weekly(): self
     {
         return $this->spliceIntoPosition(1, 0)
             ->spliceIntoPosition(2, 0)
@@ -302,7 +379,7 @@ class Scheduler
      * @param  string  $time
      * @return $this
      */
-    public function weeklyOn($day, $time = '0:0')
+    public function weeklyOn($day, $time = '0:0'): self
     {
         $this->dailyAt($time);
 
@@ -312,7 +389,7 @@ class Scheduler
     /**
      * @return $this
      */
-    public function monthly()
+    public function monthly(): self
     {
         return $this->spliceIntoPosition(1, 0)
             ->spliceIntoPosition(2, 0)
@@ -324,7 +401,7 @@ class Scheduler
      * @param  string  $time
      * @return $this
      */
-    public function monthlyOn($day = 1, $time = '0:0')
+    public function monthlyOn(int $day = 1, string $time = '0:0'): self
     {
         $this->dailyAt($time);
 
@@ -336,7 +413,7 @@ class Scheduler
      * @param  int  $second
      * @return $this
      */
-    public function twiceMonthly($first = 1, $second = 16)
+    public function twiceMonthly(int $first = 1, int $second = 16): self
     {
         $days = $first.','.$second;
 
@@ -348,7 +425,7 @@ class Scheduler
     /**
      * @return $this
      */
-    public function quarterly()
+    public function quarterly(): self
     {
         return $this->spliceIntoPosition(1, 0)
             ->spliceIntoPosition(2, 0)
@@ -359,7 +436,7 @@ class Scheduler
     /**
      * @return $this
      */
-    public function yearly()
+    public function yearly(): self
     {
         return $this->spliceIntoPosition(1, 0)
             ->spliceIntoPosition(2, 0)
@@ -371,7 +448,7 @@ class Scheduler
      * @param  array|mixed  $days
      * @return $this
      */
-    public function days($days)
+    public function days($days): self
     {
         $days = is_array($days) ? $days : func_get_args();
 
@@ -382,7 +459,7 @@ class Scheduler
      * @param  \DateTimeZone|string  $timezone
      * @return $this
      */
-    public function timezone($timezone)
+    public function timezone($timezone): self
     {
         $this->timezone = $timezone;
 
@@ -394,7 +471,7 @@ class Scheduler
      * @param  string  $value
      * @return $this
      */
-    protected function spliceIntoPosition(int $position, string $value)
+    protected function spliceIntoPosition(int $position, string $value): self
     {
         $segments = explode(' ', $this->expression);
 
@@ -403,14 +480,14 @@ class Scheduler
         return $this->cron(implode(' ', $segments));
     }
 
-    public function cron($expression)
+    public function cron($expression): self
     {
         $this->expression = $expression;
 
         return $this;
     }
 
-    protected function isDue()
+    protected function isDue(): bool
     {
         $date = Carbon::now();
 
@@ -435,5 +512,69 @@ class Scheduler
     public function getParameters(): array
     {
         return $this->parameters;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isEveryFifteenSeconds(): bool
+    {
+        return $this->everyFifteenSeconds;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isEveryThirtySeconds(): bool
+    {
+        return $this->everyThirtySeconds;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isEveryFortyFiveSeconds(): bool
+    {
+        return $this->everyFortyFiveSeconds;
+    }
+
+    /**
+     * @return Item|null
+     */
+    public function getUser(): ?Item
+    {
+        return $this->user;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function offsetExists($offset)
+    {
+        return $this->__isset($offset);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function offsetGet($offset)
+    {
+        return $this->__get($offset);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function offsetSet($offset, $value)
+    {
+        $this->__set($offset, $value);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function offsetUnset($offset)
+    {
+        $this->__unset($offset);
     }
 }

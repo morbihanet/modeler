@@ -346,6 +346,12 @@ class Db
             return $this->__model->{$name}(...$arguments);
         }
 
+        $method = Core::uncamelize($name);
+
+        if (fnmatch('where_*', $method)) {
+            return $this->where(str_replace('where_', '', $method), $arguments[0]);
+        }
+
         return $this->engine->{$name}(...$arguments);
     }
 

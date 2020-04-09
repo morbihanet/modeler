@@ -1,8 +1,29 @@
 <?php
 namespace Morbihanet\Modeler\Test;
 
+use Morbihanet\Modeler\Schedule;
+use Morbihanet\Modeler\Scheduler;
+
 class Modeler extends TestCase
 {
+    /** @test */
+    public function it_should_be_scheduled()
+    {
+        $event = Scheduler::define(function ($e) {
+            $e['test'] = $e['test'] + 1;
+        })->everyFifteenSeconds();
+
+        $event['test'] = 0;
+
+        $this->assertEquals(0, Schedule::count());
+        $this->assertEquals(1, Scheduler::run());
+        $this->assertEquals(1, Schedule::count());
+        $this->assertEquals(1, $event['test']);
+
+        $this->assertEquals(0, Scheduler::run());
+        $this->assertEquals(1, $event['test']);
+    }
+
     /** @test */
     public function it_should_be_empty_lite()
     {

@@ -27,7 +27,13 @@ class Core
 
     public static function delete(string $key)
     {
-        unset(static::$data[$key]);
+        $status = static::has($key);
+
+        if ($status) {
+            unset(static::$data[$key]);
+        }
+
+        return $status;
     }
 
     public static function now($tz = null)

@@ -3,6 +3,7 @@ namespace Morbihanet\Modeler;
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\Artisan;
 
 class ModelerServiceProvider extends ServiceProvider
 {
@@ -17,6 +18,12 @@ class ModelerServiceProvider extends ServiceProvider
 
             return response()->json(['status' => 'OK', 'done' => $done]);
         });
+
+        Artisan::command('modeler:scheduler', function () {
+            $json = file_get_contents(url(config('modeler.scheduler_route', '/modeler/scheduler/cron')));
+
+            $this->comment($json);
+        })->describe('Run Modeler Scheduler tasks');
     }
 
     private function registerMigrations()
