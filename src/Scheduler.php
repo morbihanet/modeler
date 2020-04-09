@@ -85,7 +85,10 @@ class Scheduler implements ArrayAccess
         }
 
         if (0 < $done) {
-            Schedule::firstOrCreate(['name' => 'cron'])->update(compact('success', 'fails'));
+            $item = Schedule::firstOrCreate(['name' => 'cron']);
+            $item->success = $success;
+            $item->fails = $fails;
+            $item->save();
         }
 
         return $done;
@@ -124,7 +127,7 @@ class Scheduler implements ArrayAccess
         }
 
         /** @var \Carbon\Carbon $date */
-        $date = $last->created_at;
+        $date = $last->updated_at;
 
         $diff = time() - $date->timestamp;
 
