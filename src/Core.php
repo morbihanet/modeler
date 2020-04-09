@@ -616,7 +616,7 @@ class Core
     public static function resourcesRoutes(
         string $model,
         string $controller,
-        ?string $middleware = null,
+        $middleware = null,
         ?string $prefix = null
     ) {
         $prefix = $prefix ?? '';
@@ -634,13 +634,36 @@ class Core
         $destroy = Route::delete($prefix . '/' . $model . '/{id}', $controller . '@destroy')->name($plural . '_destroy');
 
         if (!is_null($middleware)) {
-            $index->middleware($middleware);
-            $create->middleware($middleware);
-            $store->middleware($middleware);
-            $show->middleware($middleware);
-            $edit->middleware($middleware);
-            $update->middleware($middleware);
-            $destroy->middleware($middleware);
+            if (is_string($middleware) || (is_array($middleware) && !Arr::isAssoc($middleware))) {
+                /** @var string|array $middleware */
+                $indexMiddleware = $createMiddleware =
+                $storeMiddleware = $showMiddleware =
+                $editMiddleware = $updateMiddleware =
+                $destroyMiddleware = $middleware;
+            } else {
+                /** @var string|array $indexMiddleware */
+                $indexMiddleware = Arr::get($middleware, 'index', '');
+                /** @var string|array $createMiddleware */
+                $createMiddleware = Arr::get($middleware, 'create', '');
+                /** @var string|array $storeMiddleware */
+                $storeMiddleware = Arr::get($middleware, 'store', '');
+                /** @var string|array $showMiddleware */
+                $showMiddleware = Arr::get($middleware, 'show', '');
+                /** @var string|array $editMiddleware */
+                $editMiddleware = Arr::get($middleware, 'edit', '');
+                /** @var string|array $updateMiddleware */
+                $updateMiddleware = Arr::get($middleware, 'update', '');
+                /** @var string|array $destroyMiddleware */
+                $destroyMiddleware = Arr::get($middleware, 'destroy', '');
+            }
+
+            $index->middleware($indexMiddleware);
+            $create->middleware($createMiddleware);
+            $store->middleware($storeMiddleware);
+            $show->middleware($showMiddleware);
+            $edit->middleware($editMiddleware);
+            $update->middleware($updateMiddleware);
+            $destroy->middleware($destroyMiddleware);
         }
     }
 }
