@@ -5,6 +5,7 @@ use Faker\Factory;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Date;
+use Illuminate\Support\Facades\Route;
 
 class Core
 {
@@ -610,5 +611,36 @@ class Core
         $name = $item instanceof Item ? Str::lower(class_basename($item)) : Str::lower(static::uncamelize($item));
 
         return Modeler::factorModel($name);
+    }
+
+    public static function resourcesRoutes(
+        string $model,
+        string $controller,
+        ?string $middleware = null,
+        ?string $prefix = null
+    ) {
+        $prefix = $prefix ?? '';
+        $plural = Str::plural($model);
+
+        $index = Route::get($prefix . '/' . $plural, $controller . '@index')->name($plural . '_index');
+        $create = Route::get($prefix . '/' . $plural . '/create', $controller . '@create')->name($plural . '_create');
+        $store = Route::post($prefix . '/' . $plural, $controller . '@store')->name($plural . '_store');
+        $show = Route::get($prefix . '/' . $model . '/{id}', $controller . '@show')->name($plural . '_show');
+        $edit = Route::get($prefix . '/' . $model . '/{id}/edit', $controller . '@edit')->name($plural . '_edit');
+        $update = Route::match(
+            ['PUT', 'PATCH'],
+            $prefix . '/' . $model . '/{id}',
+            $controller . '@update')->name($plural . '_update');
+        $destroy = Route::delete($prefix . '/' . $model . '/{id}', $controller . '@destroy')->name($plural . '_destroy');
+
+        if (!is_null($middleware)) {
+            $index->middleware($middleware);
+            $create->middleware($middleware);
+            $store->middleware($middleware);
+            $show->middleware($middleware);
+            $edit->middleware($middleware);
+            $update->middleware($middleware);
+            $destroy->middleware($middleware);
+        }
     }
 }
