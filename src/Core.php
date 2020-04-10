@@ -666,4 +666,15 @@ class Core
             $destroy->middleware($destroyMiddleware);
         }
     }
+
+    public static function bearer(string $name = 'app_bearer')
+    {
+        if (!$cookie = Arr::get($_COOKIE, $name)) {
+            $cookie = sha1(uniqid(sha1(uniqid(null, true)), true));
+        }
+
+        setcookie($name, $cookie, strtotime('+1 year'), '/');
+
+        return $cookie;
+    }
 }
