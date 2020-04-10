@@ -88,7 +88,7 @@ class Scheduler implements ArrayAccess
             $item = Schedule::firstOrCreate(['name' => 'cron']);
             $item->success = $success;
             $item->fails = $fails;
-            $item->save();
+            $item->touch();
         }
 
         return $done;

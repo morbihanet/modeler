@@ -112,6 +112,8 @@ use Faker\Generator as Faker;
  * @method static string toJson()
  * @method static void proxy(string $method)
  * @method static mixed transaction(\Closure $callback, int $attempts = 1)
+ * @method static array morphedByMany(string $morphClass, string $morphName)
+ * @method static Item|null morphed(string $morphClass, string $morphName)
  * @property-read Proxy $average
  * @property-read Proxy $avg
  * @property-read Proxy $contains

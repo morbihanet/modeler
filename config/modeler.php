@@ -11,5 +11,6 @@ return [
     'file_dir' => storage_path("dbf"),
     'user_model' => User::class,
     'schedule_store' => Store::class,
+    'notification_store' => Store::class,
     'scheduler_route' => '/modeler/scheduler/cron',
 ];

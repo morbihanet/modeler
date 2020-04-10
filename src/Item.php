@@ -6,7 +6,7 @@ use Illuminate\Support\Carbon;
 
 class Item extends Record
 {
-    use ManyToManyable;
+    use ManyToManyable, Notifiable, Morphable;
 
     public function __construct(Db $db, array $options = [])
     {

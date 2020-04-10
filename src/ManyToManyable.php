@@ -72,6 +72,25 @@ namespace Morbihanet\Modeler;
      }
 
      /**
+      * @param $pivots
+      * @param array $attributes
+      * @return int
+      */
+     public function attachMany($pivots, array $attributes = []): int
+     {
+         $i = 0;
+
+         /** @var Item $pivot */
+         foreach ($pivots as $pivot) {
+             $this->attach($pivot, $attributes);
+
+             ++$i;
+         }
+
+         return $i;
+     }
+
+     /**
       * @param Item $pivot
       * @return bool
       */
@@ -84,6 +103,24 @@ namespace Morbihanet\Modeler;
          $query = $db->where($fk1, $this['id']);
 
          return 0 < $query->where($fk2, $pivot['id'])->destroy();
+     }
+
+     /**
+      * @param $pivots
+      * @return int
+      */
+     public function detachMany($pivots): int
+     {
+         $i = 0;
+
+         /** @var Item $pivot */
+         foreach ($pivots as $pivot) {
+             $this->detach($pivot);
+
+             ++$i;
+         }
+
+         return $i;
      }
 
      /**
@@ -102,6 +139,25 @@ namespace Morbihanet\Modeler;
          }
 
          return $item;
+     }
+
+     /**
+      * @param $pivots
+      * @param array $attributes
+      * @return int
+      */
+     public function syncMany($pivots, array $attributes = []): int
+     {
+         $i = 0;
+
+         /** @var Item $pivot */
+         foreach ($pivots as $pivot) {
+             $this->sync($pivot, $attributes);
+
+             ++$i;
+         }
+
+         return $i;
      }
 
      public function getPivots(string $relation, ?string $fk1 = null, ?string $fk2 = null)

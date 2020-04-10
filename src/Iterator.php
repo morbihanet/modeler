@@ -1734,4 +1734,28 @@ class Iterator implements IteratorAggregate
 
         return $this;
     }
+
+    public function morphedByMany(string $morphClass, string $morphName): array
+    {
+        $rows = $this->where($morphName, $morphClass)->cursor();
+
+        $results = [];
+
+        foreach ($rows as $row) {
+            $results[] = $morphClass::find($row[$morphName . '_id']);
+        }
+
+        return $results;
+    }
+
+    public function morphed(string $morphClass, string $morphName): ?Item
+    {
+        $row = $this->where($morphName, $morphClass)->first();
+
+        if ($row) {
+            return $morphClass::find($row[$morphName . '_id']);
+        }
+
+        return null;
+    }
 }
