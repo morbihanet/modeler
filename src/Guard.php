@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Facade;
  * @method static bool isGuest()
  * @method static Item|null user()
  * @method static Item|null login(string $username, string $password)
+ * @method static Item|null loginWithId(int $id)
+ * @method static bool forUser(Item $user)
  * @method static void logout()
  * @method static bool is(string ...$roles)
  * @method static bool authorize(string $policy, Item $item)

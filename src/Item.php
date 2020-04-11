@@ -420,4 +420,31 @@ class Item extends Record
     {
         return $this->authenticable;
     }
+
+    public function getId()
+    {
+        return $this->id;
+    }
+
+    public function getCreatedAt()
+    {
+        $value = $this->created_at;
+
+        if ($value) {
+            return Carbon::createFromTimestamp((int) $value);
+        }
+
+        return null;
+    }
+
+    public function getUpdatedAt()
+    {
+        $value = $this->updated_at;
+
+        if ($value) {
+            return Carbon::createFromTimestamp((int) $value);
+        }
+
+        return null;
+    }
 }

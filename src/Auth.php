@@ -36,13 +36,17 @@ class Auth
         }
     }
 
-    public function forUser($user)
+    /**
+     * @param Item $user
+     * @return bool
+     */
+    public function forUser(Item $user)
     {
         if ($olduser = $this->user()) {
-            $this->old_user = $olduser->id;
+            $this->old_user = $olduser->getId();
         }
 
-        return $this->loginWithId($user->id);
+        return $this->loginWithId($user->id) !== null;
     }
 
     /**
@@ -129,7 +133,7 @@ class Auth
     ): ?Item {
         if ($user = $this->db::where($usernamefield, $username)->first()) {
             if (password_verify($password, $user->{$passwordField})) {
-                $this->session['auth'] = $user->id;
+                $this->session['auth'] = $user->getId();
 
                 return $user;
             }
@@ -152,7 +156,7 @@ class Auth
         $user = $this->db::find($id);
 
         if ($user) {
-            $this->session['auth'] = $user->id;
+            $this->session['auth'] = $user->getId();
 
             return $user;
         }
@@ -202,9 +206,9 @@ class Auth
     }
 
     /**
-     * @return Db
+     * @return Modeler
      */
-    public function getDb(): Db
+    public function getDb(): Modeler
     {
         return $this->db;
     }
