@@ -13,5 +13,6 @@ return [
     'schedule_store' => Store::class,
     'notification_store' => Store::class,
     'bearer_store' => Store::class,
+    'modeler_store' => Store::class,
     'scheduler_route' => '/modeler/scheduler/cron',
 ];
