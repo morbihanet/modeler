@@ -1165,9 +1165,29 @@ class Iterator implements IteratorAggregate
      * @param $value
      * @return Iterator
      */
+    public function notStartsWith(string $field, $value): self
+    {
+        return $this->where($field, 'not like', $value . '%');
+    }
+
+    /**
+     * @param string $field
+     * @param $value
+     * @return Iterator
+     */
     public function whereStartsWith(string $field, $value): self
     {
         return $this->where($field, 'like', $value . '%');
+    }
+
+    /**
+     * @param string $field
+     * @param $value
+     * @return Iterator
+     */
+    public function whereNotStartsWith(string $field, $value): self
+    {
+        return $this->where($field, 'not like', $value . '%');
     }
 
     /**
@@ -1185,9 +1205,29 @@ class Iterator implements IteratorAggregate
      * @param $value
      * @return Iterator
      */
+    public function orNotStartsWith(string $field, $value): self
+    {
+        return $this->orWhere($field, 'not like', $value . '%');
+    }
+
+    /**
+     * @param string $field
+     * @param $value
+     * @return Iterator
+     */
     public function endsWith(string $field, $value): self
     {
         return $this->where($field, 'like', '%' . $value);
+    }
+
+    /**
+     * @param string $field
+     * @param $value
+     * @return Iterator
+     */
+    public function notEndsWith(string $field, $value): self
+    {
+        return $this->where($field, 'not like', '%' . $value);
     }
 
     /**
@@ -1205,9 +1245,29 @@ class Iterator implements IteratorAggregate
      * @param $value
      * @return Iterator
      */
+    public function whereNotEndsWith(string $field, $value): self
+    {
+        return $this->where($field, 'not like', '%' . $value);
+    }
+
+    /**
+     * @param string $field
+     * @param $value
+     * @return Iterator
+     */
     public function orEndsWith(string $field, $value): self
     {
-        return $this->orWhere($field, 'Like', '%' . $value);
+        return $this->orWhere($field, 'like', '%' . $value);
+    }
+
+    /**
+     * @param string $field
+     * @param $value
+     * @return Iterator
+     */
+    public function orNotEndsWith(string $field, $value): self
+    {
+        return $this->orWhere($field, 'not like', '%' . $value);
     }
 
     /**

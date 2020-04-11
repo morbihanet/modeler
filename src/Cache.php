@@ -7,8 +7,8 @@ use ArrayAccess;
 use Illuminate\Support\Str;
 use Illuminate\Support\Collection;
 use Illuminate\Contracts\Cache\Store;
-use Morbihanet\Modeler\Warehouse as Driver;
 use Illuminate\Support\Traits\Macroable;
+use Morbihanet\Modeler\Warehouse as Driver;
 
 class Cache implements Store, ArrayAccess, Countable
 {
