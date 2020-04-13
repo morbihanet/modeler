@@ -23,6 +23,8 @@ class MiddlewareCsrf
      */
     private $limit;
 
+    protected array $except = [];
+
     /**
      * @param array|\ArrayAccess $session
      * @param int $limit
@@ -48,7 +50,19 @@ class MiddlewareCsrf
      */
     public function handle($request, callable $next)
     {
-        if (in_array($request->getMethod(), ['PUT', 'POST', 'DELETE'], true)) {
+        $uri = $request->getRequestUri();
+
+        $continue = true;
+
+        foreach ($this->except as $except) {
+            if (fnmatch($except, $uri)) {
+                $continue = false;
+
+                break;
+            }
+        }
+
+        if (true === $continue && in_array($request->getMethod(), ['PUT', 'POST', 'DELETE'], true)) {
             $params = $request->all();
 
             if (!array_key_exists($this->formKey, $params)) {
