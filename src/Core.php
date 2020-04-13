@@ -1,6 +1,7 @@
 <?php
 namespace Morbihanet\Modeler;
 
+use Exception;
 use Faker\Factory;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
@@ -602,6 +603,19 @@ class Core
         return Session::getInstance($namespace, $userKey, $userModel);
     }
 
+    public static function exception($type, $message, $extends = Exception::class)
+    {
+        $what   = ucfirst(Str::camel($type . '_exception'));
+        $class  = 'Morbihanet\\Modeler\\' . $what;
+
+        if (!class_exists($class)) {
+            $code = 'namespace Morbihanet\\Modeler; class ' . $what . ' extends ' . $extends . ' {}';
+            eval($code);
+        }
+
+        throw new $class($message);
+    }
+
     /**
      * @param $item
      * @return Store|FileStore|RedisStore|MemoryStore
@@ -676,5 +690,25 @@ class Core
         setcookie($name, $cookie, strtotime('+1 year'), '/');
 
         return $cookie;
+    }
+
+    public static function getToken()
+    {
+        /** @var MiddlewareCsrf $csrf */
+        $csrf = static::get('csrf');
+
+        return $csrf->generateToken();
+    }
+
+    public static function csrf_field()
+    {
+        /** @var MiddlewareCsrf $csrf */
+        $csrf = static::get('csrf');
+
+        return '<input 
+type="hidden" 
+name="'.$csrf->getFormKey().'" 
+value="'.static::getToken().'"
+>';
     }
 }

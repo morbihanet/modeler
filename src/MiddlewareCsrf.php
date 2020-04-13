@@ -41,6 +41,8 @@ class MiddlewareCsrf
         $this->sessionKey   = $sessionKey;
         $this->formKey      = $formKey;
         $this->limit        = $limit;
+
+        Core::set('csrf', $this);
     }
 
     /**
@@ -66,11 +68,11 @@ class MiddlewareCsrf
             $params = $request->all();
 
             if (!array_key_exists($this->formKey, $params)) {
-                exception('NoCsrf', 'no csrf');
+                Core::exception('NoCsrf', 'no csrf');
             }
 
             if (false === $this->check($params[$this->formKey], $this->session[$this->sessionKey] ?? [])) {
-                exception('InvalidCsrf', 'invalid csrf');
+                Core::exception('InvalidCsrf', 'invalid csrf');
             }
 
             $this->removeToken($params[$this->formKey]);
