@@ -342,6 +342,15 @@ class Db
             return $this->macroCall($name, $arguments);
         }
 
+        /** @var Modeler $modeler */
+        $modeler = Core::get('modeler');
+
+        if (in_array($name, get_class_methods($modeler))) {
+            $arguments[] = $this;
+
+            return $modeler->{$name}(...$arguments);
+        }
+
         if ($this->__model instanceof Item) {
             return $this->__model->{$name}(...$arguments);
         }

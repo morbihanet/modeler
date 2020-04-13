@@ -349,10 +349,19 @@ class Item extends Record
      */
     public function __call(string $name, array $arguments)
     {
+        /** @var Modeler $modeler */
+        $modeler = Core::get('modeler');
+
+        if (in_array($name, get_class_methods($modeler))) {
+            $arguments[] = $this;
+
+            return $modeler->{$name}(...$arguments);
+        }
+
         /** @var Db|null $db */
         $db = $values['__db'] ?? Core::getDb($this) ?? null;
 
-        if (in_array($name, get_class_methods($db))) {
+        if (is_object($db) && in_array($name, get_class_methods($db))) {
             $arguments[] = $this;
 
             return $db->{$name}(...$arguments);
