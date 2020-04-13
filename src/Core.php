@@ -609,7 +609,7 @@ class Core
         $class  = 'Morbihanet\\Modeler\\' . $what;
 
         if (!class_exists($class)) {
-            $code = 'namespace Morbihanet\\Modeler; class ' . $what . ' extends ' . $extends . ' {}';
+            $code = 'namespace Morbihanet\\Modeler; class ' . $what . ' extends \\' . $extends . ' {}';
             eval($code);
         }
 
@@ -705,9 +705,9 @@ class Core
         /** @var MiddlewareCsrf $csrf */
         $csrf = static::get('csrf');
 
-        return '<input 
-type="hidden" 
-name="'.$csrf->getFormKey().'" 
+        return '<input
+type="hidden"
+name="'.$csrf->getFormKey().'"
 value="'.static::getToken().'"
 >';
     }
