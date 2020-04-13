@@ -343,7 +343,7 @@ class Db
         }
 
         /** @var Modeler $modeler */
-        $modeler = Core::get('modeler');
+        $modeler = app(Core::get('modeler'));
 
         if (in_array($name, get_class_methods($modeler))) {
             $arguments[] = $this;
