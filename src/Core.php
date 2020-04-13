@@ -617,6 +617,15 @@ class Core
     }
 
     /**
+     * @param $concern
+     * @return Bind
+     */
+    public static function bind($concern)
+    {
+        return new Bind($concern);
+    }
+
+    /**
      * @param $item
      * @return Store|FileStore|RedisStore|MemoryStore
      */

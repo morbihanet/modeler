@@ -4,7 +4,7 @@ namespace Morbihanet\Modeler;
 
 use Closure;
 
-class Authorize
+class Policy
 {
     /**
      * @var Guard
