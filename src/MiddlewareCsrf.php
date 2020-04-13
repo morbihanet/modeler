@@ -57,7 +57,7 @@ class MiddlewareCsrf
         $continue = true;
 
         foreach ($this->except as $except) {
-            if (fnmatch($except, $uri)) {
+            if (fnmatch('/' . $except, $uri)) {
                 $continue = false;
 
                 break;
