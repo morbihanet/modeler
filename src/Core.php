@@ -52,6 +52,11 @@ class Core
         static::$data['instance_' . $key] = $value;
     }
 
+    public static function di(): Di
+    {
+        return Di::getInstance();
+    }
+
     public static function resolve($class)
     {
         $class = is_object($class) ? get_class($class) : $class;
@@ -60,11 +65,9 @@ class Core
             return null;
         }
 
-        $container = Di::getInstance();
+        $container = static::di();
         $dependancyClass = new ReflectionClass($class);
         $instanciable = $dependancyClass->isInstantiable();
-
-        $made = false;
 
         if ($instanciable) {
             $constructorArguments = $dependancyClass->getConstructor()->getParameters();
