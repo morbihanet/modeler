@@ -3,6 +3,7 @@ namespace Morbihanet\Modeler;
 
 use Exception;
 use Faker\Factory;
+use ReflectionClass;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Date;
@@ -14,7 +15,21 @@ class Core
 
     public static function get(string $key, $default = null)
     {
-        return value(Arr::get(static::$data, $key, $default));
+        return value(
+            Arr::get(
+                static::$data,
+                $key,
+                Arr::get(
+                    static::$data,
+                    'instance_' . $key,
+                    Arr::get(
+                        static::$data,
+                        'singleton_' . $key,
+                        $default
+                    )
+                )
+            )
+        );
     }
 
     public static function set(string $key, $value)
@@ -25,6 +40,81 @@ class Core
     public static function has(string $key)
     {
         return isset(static::$data[$key]);
+    }
+
+    public static function singleton(string $key, $value)
+    {
+        static::$data['singleton_' . $key] = value($value);
+    }
+
+    public static function instance(string $key, $value)
+    {
+        static::$data['instance_' . $key] = $value;
+    }
+
+    public static function resolve($class)
+    {
+        $class = is_object($class) ? get_class($class) : $class;
+
+        if (!class_exists($class)) {
+            return null;
+        }
+
+        $container = Di::getInstance();
+        $dependancyClass = new ReflectionClass($class);
+        $instanciable = $dependancyClass->isInstantiable();
+
+        $made = false;
+
+        if ($instanciable) {
+            $constructorArguments = $dependancyClass->getConstructor()->getParameters();
+
+            if (empty($constructorArguments)) {
+                return $dependancyClass->newInstance();
+            }
+
+            $dependancyClassName = $dependancyClass->getName();
+
+            if ($container->has($dependancyClassName)) {
+                return $container->get($dependancyClassName);
+            }
+                $params = [];
+
+                foreach ($constructorArguments as $param) {
+                    if ($param->isDefaultValueAvailable()) {
+                        $params[] = $param->getDefaultValue();
+                    } else {
+                        if ($classParam = $param->getClass()) {
+                            $params[] = static::resolve($classParam->getName());
+                        }
+                    }
+                }
+
+                try {
+                    $instance = $dependancyClass->newInstanceArgs($params);
+                    $container->set($dependancyClassName, $instance);
+
+                    return $instance;
+                } catch (Exception $e) {
+                    $interfaces = $dependancyClass->getInterfaces();
+
+                    foreach ($interfaces as $interface) {
+                        $resolvedService = static::resolve($interface->getName());
+
+                        if (null !== $resolvedService) {
+                            $container->set($interface->getName(), $resolvedService);
+
+                            return $resolvedService;
+                        }
+                    }
+
+                    if ($parentClass = $dependancyClass->getParentClass()) {
+                        return static::resolve($parentClass->getName());
+                    }
+                }
+        }
+
+        return null;
     }
 
     public static function delete(string $key)
