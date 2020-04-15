@@ -1,9 +1,11 @@
 <?php
 namespace Morbihanet\Modeler;
 
+use Closure;
 use Exception;
 use Faker\Factory;
 use ReflectionClass;
+use ReflectionFunction;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Date;
@@ -57,7 +59,7 @@ class Core
         return Di::getInstance();
     }
 
-    public static function resolve($class)
+    public static function resolve($class, ...$arguments)
     {
         $class = is_object($class) ? get_class($class) : $class;
 
@@ -78,46 +80,204 @@ class Core
 
             $dependancyClassName = $dependancyClass->getName();
 
+            if (count($arguments) === count($constructorArguments)) {
+                $instance = $dependancyClass->newInstanceArgs($arguments);
+                $container->set($dependancyClassName, $instance);
+
+                return $instance;
+            }
+
             if ($container->has($dependancyClassName)) {
                 return $container->get($dependancyClassName);
             }
-                $params = [];
 
-                foreach ($constructorArguments as $param) {
-                    if ($param->isDefaultValueAvailable()) {
-                        $params[] = $param->getDefaultValue();
-                    } else {
-                        if ($classParam = $param->getClass()) {
-                            $params[] = static::resolve($classParam->getName());
+            $params = [];
+
+            foreach ($constructorArguments as $param) {
+                if ($param->isDefaultValueAvailable()) {
+                    $params[] = $param->getDefaultValue();
+                } else {
+                    if ($classParam = $param->getClass()) {
+                        $paramValue = static::resolve($classParam->getName());
+
+                        if (null === $paramValue && !empty($arguments)) {
+                            $paramValue = array_shift($arguments);
                         }
+
+                        $params[] = $paramValue;
+                    }
+                }
+            }
+
+            try {
+                $instance = $dependancyClass->newInstanceArgs($params);
+                $container->set($dependancyClassName, $instance);
+
+                return $instance;
+            } catch (Exception $e) {
+                $interfaces = $dependancyClass->getInterfaces();
+
+                foreach ($interfaces as $interface) {
+                    $resolvedService = static::resolve($interface->getName());
+
+                    if (null !== $resolvedService) {
+                        $container->set($interface->getName(), $resolvedService);
+
+                        return $resolvedService;
                     }
                 }
 
-                try {
-                    $instance = $dependancyClass->newInstanceArgs($params);
-                    $container->set($dependancyClassName, $instance);
-
-                    return $instance;
-                } catch (Exception $e) {
-                    $interfaces = $dependancyClass->getInterfaces();
-
-                    foreach ($interfaces as $interface) {
-                        $resolvedService = static::resolve($interface->getName());
-
-                        if (null !== $resolvedService) {
-                            $container->set($interface->getName(), $resolvedService);
-
-                            return $resolvedService;
-                        }
-                    }
-
-                    if ($parentClass = $dependancyClass->getParentClass()) {
-                        return static::resolve($parentClass->getName());
-                    }
+                if ($parentClass = $dependancyClass->getParentClass()) {
+                    return static::resolve($parentClass->getName());
                 }
+            }
         }
 
         return null;
+    }
+
+    public static function resolveClosure($closure, ...$args)
+    {
+        if (!$closure instanceof Closure) {
+            static::exception('Core', "The first argument must be a closure object.");
+        }
+
+        if (!$closure instanceof Closure && is_object($closure)) {
+            $closure = static::toClosure($closure);
+        }
+
+        $ref        = new ReflectionFunction($closure);
+        $params     = $ref->getParameters();
+
+        $isVariadic = false;
+
+        if (count($params) === 1) {
+            $firstParam = current($params);
+
+            $isVariadic = $firstParam->isVariadic();
+        }
+
+        if ($isVariadic) {
+            return $closure(...$args);
+        }
+
+        if (empty($args) || count($args) !== count($params)) {
+            $instanceParams = [];
+
+            foreach ($params as $param) {
+                $p = null;
+
+                if (!empty($args)) {
+                    $p = array_shift($args);
+
+                    if (is_null($p)) {
+                        try {
+                            $p = $param->getDefaultValue();
+                        } catch (Exception $e) {
+                            $p = null;
+                        }
+                    }
+
+                    $classParam = $param->getClass();
+
+                    if ($classParam) {
+                        $c = $classParam->getName();
+                        $made = false;
+
+                        if (!$p instanceof $c) {
+                            array_unshift($args, $p);
+
+                            try {
+                                $p = static::resolve($c);
+
+                                $made = true;
+                            } catch (Exception $e) {
+                                static::exception('Core', $e->getMessage());
+                            }
+                        }
+
+                        if (false === $made) {
+                            if ($param->hasType()) {
+                                $t = (string) $param->getType()->getName();
+
+                                if (is_object($p) && !$p instanceof $t) {
+                                    if (true === $param->isDefaultValueAvailable()) {
+                                        $p = $param->getDefaultValue();
+                                    }
+                                }
+                            }
+                        } else {
+                            if ($param->hasType()) {
+                                $t = (string) $param->getType()->getName();
+
+                                if (is_object($p) && get_class($p) !== $t) {
+                                    if ($aw = static::resolve($t)) {
+                                        $p = $aw;
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        if ($param->hasType()) {
+                            if ($param->getType()->getName() !== (string) gettype($p)) {
+                                if (!empty($args)) {
+                                    $found = false;
+
+                                    foreach ($args as $k => $a) {
+                                        if (!$found && $param->getType()->getName() === (string) gettype($a)) {
+                                            $args[$k] = $p;
+                                            $p = $a;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    $classParam = $param->getClass();
+
+                    if ($classParam) {
+                        try {
+                            $p = static::resolve($classParam->getName());
+                        } catch (Exception $e) {
+                            static::exception('Core', $e->getMessage());
+                        }
+                    } else {
+                        try {
+                            $p = $param->getDefaultValue();
+                        } catch (Exception $e) {
+                            $attr = request()->get($param->getName());
+
+                            if ($attr) {
+                                $p = $attr;
+                            } else {
+                                static::exception(
+                                    'Core',
+                                    $param->getName() . " parameter has no default value."
+                                );
+                            }
+                        }
+                    }
+                }
+
+                $instanceParams[] = $p;
+            }
+
+            if (!empty($instanceParams)) {
+                return $closure(...$instanceParams);
+            } else {
+                return value($closure);
+            }
+        } else {
+            return $closure(...$args);
+        }
+    }
+
+    public static function toClosure($concern)
+    {
+        return function () use ($concern) {
+            return $concern;
+        };
     }
 
     public static function delete(string $key)
