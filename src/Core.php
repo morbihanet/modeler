@@ -98,10 +98,14 @@ class Core
                     $params[] = $param->getDefaultValue();
                 } else {
                     if ($classParam = $param->getClass()) {
-                        $paramValue = static::resolve($classParam->getName());
+                        $paramValue = static::resolve($className = $classParam->getName());
 
                         if (null === $paramValue && !empty($arguments)) {
-                            $paramValue = array_shift($arguments);
+                            $argValue = array_shift($arguments);
+
+                            if ($argValue instanceof $className) {
+                                $paramValue = $argValue;
+                            }
                         }
 
                         $params[] = $paramValue;

@@ -162,7 +162,7 @@ class Db
     public function observe(string $class): self
     {
         $observers = Core::get('itdb.observers', []);
-        $observers[get_called_class()] = app()->make($class);
+        $observers[get_called_class()] = $class;
         Core::set('itdb.observers', $observers);
 
         return $this;
