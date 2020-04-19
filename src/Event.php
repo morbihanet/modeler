@@ -1,9 +1,6 @@
 <?php
 namespace Morbihanet\Modeler;
 
-use Illuminate\Support\Str;
-use Illuminate\Support\Arr;
-
 class Event
 {
     /**
