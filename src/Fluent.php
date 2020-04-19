@@ -12,11 +12,7 @@ class Fluent extends \Illuminate\Support\Fluent
 
     public function get($key, $default = null)
     {
-        $value = $default;
-
-        if (array_key_exists($key, $this->attributes)) {
-            $value = $this->attributes[$key];
-        }
+        $value = $this->attributes[$key] ?? $default;
 
         return value($value);
     }
