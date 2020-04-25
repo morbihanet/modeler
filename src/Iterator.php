@@ -1612,10 +1612,14 @@ class Iterator implements IteratorAggregate
         });
     }
 
-    public function firstOrNew(array $attributes = [], array $values = [])
+    public function firstOrNew(array $attributes = [], array $values = []): Item
     {
-        if (!is_null($instance = $this->where($attributes)->first())) {
-            return $instance;
+        foreach ($attributes as $field => $value) {
+            $this->where($field, $value);
+        }
+
+        if ($row = $this->first()) {
+            return $row;
         }
 
         $db = $this->getModel();

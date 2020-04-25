@@ -37,24 +37,30 @@ class Core
         );
     }
 
-    public static function set(string $key, $value)
+    public static function set(string $key, $value): self
     {
         static::$data[$key] = $value;
+
+        return new static;
     }
 
-    public static function has(string $key)
+    public static function has(string $key): bool
     {
         return isset(static::$data[$key]);
     }
 
-    public static function singleton(string $key, $value)
+    public static function singleton(string $key, $value): self
     {
         static::$data['singleton_' . $key] = value($value);
+
+        return new static;
     }
 
-    public static function instance(string $key, $value)
+    public static function instance(string $key, $value): self
     {
         static::$data['instance_' . $key] = $value;
+
+        return new static;
     }
 
     public static function di(): Di
@@ -287,7 +293,7 @@ class Core
         };
     }
 
-    public static function delete(string $key)
+    public static function delete(string $key): bool
     {
         $status = static::has($key);
 
@@ -303,7 +309,7 @@ class Core
         return Date::now($tz);
     }
 
-    public static function arrayable($concern)
+    public static function arrayable($concern): bool
     {
         return is_object($concern) && in_array('toArray', get_class_methods($concern));
     }
@@ -325,10 +331,7 @@ class Core
         return $iterator;
     }
 
-    /**
-     * @return Iterator
-     */
-    public static function store($scope = null)
+    public static function store($scope = null): Iterator
     {
         return static::get('store', new Iterator($scope));
     }
@@ -1006,6 +1009,28 @@ class Core
         });
 
         return $lines;
+    }
+
+    public static function validator(): \Illuminate\Validation\Factory
+    {
+        /** @var \Illuminate\Validation\Factory $factory */
+        $factory = app(\Illuminate\Contracts\Validation\Factory::class);
+
+        $factory->resolver(function (array $data, array $rules, array $messages = [], array $attributes = []) {
+            return new Validator($data, $rules, $messages, $attributes);
+        });
+
+        return $factory;
+    }
+
+    public static function validate(array $data, array $rules, array $messages = [], array $attributes = []): array
+    {
+        return static::validator()->make($data, $rules, $messages, $attributes)->validate();
+    }
+
+    public static function validateRequest(array $rules, array $messages = [], array $attributes = []): array
+    {
+        return static::validate(request()->all(), $rules, $messages, $attributes);
     }
 
     public static function csrf_field()
