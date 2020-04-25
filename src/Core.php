@@ -330,7 +330,6 @@ class Core
 
         return $iterator;
     }
-
     public static function store($scope = null): Iterator
     {
         return static::get('store', new Iterator($scope));

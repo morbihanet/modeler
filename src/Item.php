@@ -276,7 +276,7 @@ class Item extends Record
         $values = $this->toArray();
 
         /** @var Db $db */
-        $db = $this['__db'] ?? Core::getDb($this) ?? null;
+        $db = $values['__db'] ?? Core::getDb($this) ?? null;
 
         if (null === $db) {
             return parent::__get($name);
@@ -315,7 +315,7 @@ class Item extends Record
         $values = $this->toArray();
 
         /** @var Db|null $db */
-        $db = $this['__db'] ?? Core::getDb($this) ?? null;
+        $db = $values['__db'] ?? Core::getDb($this) ?? null;
 
         if (null === $db) {
             return parent::get($name, $default);
@@ -364,7 +364,7 @@ class Item extends Record
         }
 
         /** @var Db|null $db */
-        $db = $this['__db'] ?? Core::getDb($this) ?? null;
+        $db = $values['__db'] ?? Core::getDb($this) ?? null;
 
         if (is_object($db) && in_array($name, get_class_methods($db))) {
             $arguments[] = $this;
@@ -410,7 +410,7 @@ class Item extends Record
     public function toArray(): array
     {
         /** @var Db $db */
-        $db = $this['__db'] ?? Core::fullObjectToArray($this)['options']['__db'] ?? Core::get('item_db');
+        $db = Core::fullObjectToArray($this)['options']['__db'] ?? Core::get('item_db');
 
         $row = parent::toArray();
 
