@@ -281,7 +281,7 @@ class Item extends Record
         $method = Str::camel('set_' . Str::lower($offset) . '_attribute');
 
         if (in_array($method, get_class_methods($modeler = $this->modeler()))) {
-            $value = $modeler->{$method}($value);
+            $value = $modeler->{$method}($value, $this);
         }
 
         parent::__set($offset, $value);
