@@ -8,8 +8,10 @@ use ReflectionClass;
 use ReflectionFunction;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB as DbMaster;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Database\QueryException;
 
 class Core
 {
@@ -338,6 +340,39 @@ class Core
     public static function faker(string $lng = 'fr_FR')
     {
         return Factory::create(config('faker.language', $lng));
+    }
+
+    public static function transaction(
+        Closure $transaction,
+        Closure $onFail,
+        Closure $onSuccess,
+        ?string $uuid = null) {
+        $uuid = $uuid === null ? Str::uuid()->toString() : $uuid;
+
+        DbMaster::beginTransaction();
+
+        try {
+            Context::merge([
+                'transaction_uuid' => $uuid,
+            ]);
+
+            value($transaction);
+        } catch (QueryException $e) {
+            Context::merge([
+                'transaction_uuid' => $uuid,
+                'exception_message' => $e->getMessage(),
+            ]);
+
+            $onFail->call($e, $e);
+
+            DbMaster::rollBack();
+
+            throw $e;
+        }
+
+        DbMaster::commit();
+
+        return value($onSuccess);
     }
 
     /**

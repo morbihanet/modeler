@@ -273,46 +273,29 @@ class Item extends Record
 
     public function __get($name)
     {
-        $values = $this->toArray();
+        return $this->get($name);
+    }
 
-        /** @var Db $db */
-        $db = $values['__db'] ?? Core::getDb($this) ?? null;
+    public function __set($offset, $value)
+    {
+        $method = Str::camel('set_' . Str::lower($offset) . '_attribute');
 
-        if (null === $db) {
-            return parent::__get($name);
+        if (in_array($method, get_class_methods($modeler = $this->modeler()))) {
+            $value = $modeler->{$method}($value);
         }
 
-        if (in_array($name, get_class_methods($db))) {
-            return $db->{$name}($this);
-        }
-
-        if (fnmatch('*_at', $name) && isset($values[$name]) && is_numeric($values[$name])) {
-            return Carbon::createFromTimestamp((int) $values[$name]);
-        }
-
-        if (!array_key_exists($name, $values)) {
-            if (fnmatch('*s', $name) && !isset($values[$name . '_id'])) {
-                $concern    = ucfirst(Str::camel(substr($name, 0, -1)));
-                $modelName  = ucfirst(class_basename($db));
-                $relation   = str_replace('\\' . $modelName, '\\' . $concern, get_class($db));
-
-                return $db->hasMany($relation, null, $this);
-            }
-
-            if (isset($values[$name . '_id']) && is_numeric($values[$name . '_id'])) {
-                $modelName = ucfirst(class_basename($db));
-                $relation = str_replace('\\' . $modelName, '\\' . ucfirst(Str::camel($name)), get_class($db));
-
-                return $db->belongsTo($relation, null, $this);
-            }
-        }
-
-        return parent::__get($name);
+        parent::__set($offset, $value);
     }
 
     public function get($name, $default = null)
     {
         $values = $this->toArray();
+
+        $method = Str::camel('get_' . Str::lower($name) . '_attribute');
+
+        if (in_array($method, get_class_methods($modeler = $this->modeler()))) {
+            return $modeler->{$method}($this);
+        }
 
         /** @var Db|null $db */
         $db = $values['__db'] ?? Core::getDb($this) ?? null;
@@ -347,6 +330,14 @@ class Item extends Record
         return parent::get($name, $default);
     }
 
+    public function modeler(): Modeler
+    {
+        /** @var Modeler $modeler */
+        $modeler = app()->make(Core::get('modeler'));
+
+        return $modeler;
+    }
+
     /**
      * @param string $name
      * @param array $arguments
@@ -354,10 +345,7 @@ class Item extends Record
      */
     public function __call(string $name, array $arguments)
     {
-        /** @var Modeler $modeler */
-        $modeler = app(Core::get('modeler'));
-
-        if (in_array($name, get_class_methods($modeler))) {
+        if (in_array($name, get_class_methods($modeler = $this->modeler()))) {
             $arguments[] = $this;
 
             return $modeler->{$name}(...$arguments);
