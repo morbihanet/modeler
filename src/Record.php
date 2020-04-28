@@ -291,7 +291,7 @@ class Record implements \IteratorAggregate, \ArrayAccess, \Countable
         }
 
         if ($class = Core::get('modeler')) {
-            $model = new $class;
+            $model = app()->make($class);
 
             if (in_array($name, get_class_methods($model))) {
                 return $model->{$name}(...$arguments);

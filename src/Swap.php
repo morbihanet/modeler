@@ -17,7 +17,7 @@ class Swap
      */
     public static function call($interaction, ...$parameters)
     {
-        return static::interact($interaction, $parameters);
+        return static::interact($interaction, ...$parameters);
     }
 
     /**
@@ -25,7 +25,7 @@ class Swap
      * @param  array  $parameters
      * @return mixed
      */
-    public static function interact($interaction, array $parameters = [])
+    public static function interact($interaction, ...$parameters)
     {
         if (!Str::contains($interaction, '@')) {
             $interaction = $interaction.'@handle';
@@ -46,16 +46,16 @@ class Swap
         $instance = app()->make($class);
 
         $closure = function () use ($instance, $method, $parameters) {
-            if (in_array($method, get_class_methods($instance))) {
-                return $instance->{$method}(...$parameters);
+            try {
+                return Core::bind($instance)->{$method}(...$parameters);
+            } catch (\Exception $e) {
+                return Core::bind($instance)->{$method};
             }
-
-            return $instance->{$method};
         };
 
         $closure->bindTo($instance, $instance);
 
-        return app()->call($closure, $parameters);
+        return value($closure);
     }
 
     /**
@@ -74,15 +74,25 @@ class Swap
 
         $method = static::$interactions[$interaction]->bindTo($instance, $instance);
 
-        return app()->call($method, $parameters);
+        return $method(...$parameters);
     }
 
     /**
-     * @param $interaction
+     * @param string $interaction
      * @param $callback
      * @return bool
      */
-    public static function swap($interaction, $callback)
+    public static function define(string $interaction, $callback)
+    {
+        return static::swap($interaction, $callback);
+    }
+
+    /**
+     * @param string $interaction
+     * @param $callback
+     * @return bool
+     */
+    public static function swap(string $interaction, $callback)
     {
         $status = isset(static::$interactions[$interaction]);
 

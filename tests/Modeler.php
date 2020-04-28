@@ -1,11 +1,37 @@
 <?php
 namespace Morbihanet\Modeler\Test;
 
+use Morbihanet\Modeler\Swap;
 use Morbihanet\Modeler\Schedule;
 use Morbihanet\Modeler\Scheduler;
 
 class Modeler extends TestCase
 {
+    /** @test */
+    public function it_should_be_swappable()
+    {
+        $this->assertSame(50, Swap::call(Swappable::class . '@withParams', 5, 10));
+
+        Swap::swap(Swappable::class . '@withParams', function (int $a, int $b) {
+            return $a + $b;
+        });
+
+        $this->assertSame(15, Swap::call(Swappable::class . '@withParams', 5, 10));
+
+        Swap::swap(Swappable::class . '@dummy', function () {
+            return 'foo';
+        });
+
+        $this->assertSame('foo', Swap::call(Swappable::class . '@dummy'));
+        $this->assertSame('baz', Swap::call(Swappable::class . '@test'));
+
+        Swap::swap(Swappable::class . '@test', function () {
+            return 'bar';
+        });
+
+        $this->assertSame('bar', Swap::call(Swappable::class . '@test'));
+    }
+
     /** @test */
     public function it_should_be_scheduled()
     {

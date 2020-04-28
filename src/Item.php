@@ -242,7 +242,7 @@ class Item extends Record
     public function fill(array $data): self
     {
         foreach ($data as $key => $value) {
-            $this[$key] = $value;
+            $this->set($key, $value);
         }
 
         return $this;
@@ -278,13 +278,21 @@ class Item extends Record
 
     public function __set($offset, $value)
     {
-        $method = Str::camel('set_' . Str::lower($offset) . '_attribute');
+        $this->set($offset, $value);
+    }
+
+
+    public function set($name, $value)
+    {
+        $method = Str::camel('set_' . Str::lower($name) . '_attribute');
 
         if (in_array($method, get_class_methods($modeler = $this->modeler()))) {
             $value = $modeler->{$method}($value, $this);
         }
 
-        parent::__set($offset, $value);
+        parent::set($name, $value);
+
+        return $this;
     }
 
     public function get($name, $default = null)

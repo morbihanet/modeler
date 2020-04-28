@@ -8,10 +8,11 @@ use ReflectionClass;
 use ReflectionFunction;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
-use Illuminate\Support\Facades\DB as DbMaster;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Database\QueryException;
+use Illuminate\Http\Client\Factory as Http;
+use Illuminate\Support\Facades\DB as DbMaster;
 
 class Core
 {
@@ -389,6 +390,11 @@ class Core
         }
 
         return $db;
+    }
+
+    public static function http()
+    {
+        return app(Http::class);
     }
 
     public static function model(Db $db, array $data = []): Item
