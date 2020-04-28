@@ -5,22 +5,34 @@ use Closure;
 use Exception;
 use Faker\Factory;
 use ReflectionClass;
+use Faker\Generator;
 use ReflectionFunction;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Client\Factory as Http;
 use Illuminate\Support\Facades\DB as DbMaster;
+use Illuminate\Validation\Factory as ValidatorFactory;
 
 class Core
 {
+    /** @var array */
     protected static $data = [];
 
+    /** @var string */
     const EMAIL_REGEX_LOCAL = '(?!(?:(?:\\x22?\\x5C[\\x00-\\x7E]\\x22?)|(?:\\x22?[^\\x5C\\x22]\\x22?)){255,})(?!(?:(?:\\x22?\\x5C[\\x00-\\x7E]\\x22?)|(?:\\x22?[^\\x5C\\x22]\\x22?)){65,}@)(?:(?:[\\x21\\x23-\\x27\\x2A\\x2B\\x2D\\x2F-\\x39\\x3D\\x3F\\x5E-\\x7E]+)|(?:\\x22(?:[\\x01-\\x08\\x0B\\x0C\\x0E-\\x1F\\x21\\x23-\\x5B\\x5D-\\x7F]|(?:\\x5C[\\x00-\\x7F]))*\\x22))(?:\\.(?:(?:[\\x21\\x23-\\x27\\x2A\\x2B\\x2D\\x2F-\\x39\\x3D\\x3F\\x5E-\\x7E]+)|(?:\\x22(?:[\\x01-\\x08\\x0B\\x0C\\x0E-\\x1F\\x21\\x23-\\x5B\\x5D-\\x7F]|(?:\\x5C[\\x00-\\x7F]))*\\x22)))*';
+
+    /** @var string */
     const EMAIL_REGEX_DOMAIN = '(?:(?:(?!.*[^.]{64,})(?:(?:(?:xn--)?[a-z0-9]+(?:-[a-z0-9]+)*\\.){1,126}){1,}(?:(?:[a-z][a-z0-9]*)|(?:(?:xn--)[a-z0-9]+))(?:-[a-z0-9]+)*)|(?:\\[(?:(?:IPv6:(?:(?:[a-f0-9]{1,4}(?::[a-f0-9]{1,4}){7})|(?:(?!(?:.*[a-f0-9][:\\]]){7,})(?:[a-f0-9]{1,4}(?::[a-f0-9]{1,4}){0,5})?::(?:[a-f0-9]{1,4}(?::[a-f0-9]{1,4}){0,5})?)))|(?:(?:IPv6:(?:(?:[a-f0-9]{1,4}(?::[a-f0-9]{1,4}){5}:)|(?:(?!(?:.*[a-f0-9]:){5,})(?:[a-f0-9]{1,4}(?::[a-f0-9]{1,4}){0,3})?::(?:[a-f0-9]{1,4}(?::[a-f0-9]{1,4}){0,3}:)?)))?(?:(?:25[0-5])|(?:2[0-4][0-9])|(?:1[0-9]{2})|(?:[1-9]?[0-9]))(?:\\.(?:(?:25[0-5])|(?:2[0-4][0-9])|(?:1[0-9]{2})|(?:[1-9]?[0-9]))){3}))\\]))';
 
+    /**
+     * @param string $key
+     * @param mixed|null $default
+     * @return mixed
+     */
     public static function get(string $key, $default = null)
     {
         return value(
@@ -40,6 +52,11 @@ class Core
         );
     }
 
+    /**
+     * @param string $key
+     * @param $value
+     * @return static
+     */
     public static function set(string $key, $value): self
     {
         static::$data[$key] = $value;
@@ -47,11 +64,20 @@ class Core
         return new static;
     }
 
+    /**
+     * @param string $key
+     * @return bool
+     */
     public static function has(string $key): bool
     {
         return isset(static::$data[$key]);
     }
 
+    /**
+     * @param string $key
+     * @param $value
+     * @return static
+     */
     public static function singleton(string $key, $value): self
     {
         static::$data['singleton_' . $key] = value($value);
@@ -59,6 +85,11 @@ class Core
         return new static;
     }
 
+    /**
+     * @param string $key
+     * @param $value
+     * @return static
+     */
     public static function instance(string $key, $value): self
     {
         static::$data['instance_' . $key] = $value;
@@ -66,11 +97,19 @@ class Core
         return new static;
     }
 
+    /**
+     * @return Di
+     */
     public static function di(): Di
     {
         return Di::getInstance();
     }
 
+    /**
+     * @param $class
+     * @param mixed ...$arguments
+     * @return mixed|object|null
+     */
     public static function resolve($class, ...$arguments)
     {
         $class = is_object($class) ? get_class($class) : $class;
@@ -152,6 +191,11 @@ class Core
         return null;
     }
 
+    /**
+     * @param mixed $closure
+     * @param mixed ...$args
+     * @return mixed
+     */
     public static function resolveClosure($closure, ...$args)
     {
         if (!$closure instanceof Closure) {
@@ -289,13 +333,21 @@ class Core
         }
     }
 
-    public static function toClosure($concern)
+    /**
+     * @param mixed $concern
+     * @return Closure
+     */
+    public static function toClosure($concern): Closure
     {
         return function () use ($concern) {
             return $concern;
         };
     }
 
+    /**
+     * @param string $key
+     * @return bool
+     */
     public static function delete(string $key): bool
     {
         $status = static::has($key);
@@ -307,17 +359,29 @@ class Core
         return $status;
     }
 
-    public static function now($tz = null)
+    /**
+     * @param null $tz
+     * @return Carbon
+     */
+    public static function now($tz = null): Carbon
     {
         return Date::now($tz);
     }
 
+    /**
+     * @param object $concern
+     * @return bool
+     */
     public static function arrayable($concern): bool
     {
         return is_object($concern) && in_array('toArray', get_class_methods($concern));
     }
 
-    public static function iterator($concern = null)
+    /**
+     * @param null $concern
+     * @return Iterator
+     */
+    public static function iterator($concern = null): Iterator
     {
         $iterator = new Iterator($concern);
 
@@ -333,16 +397,32 @@ class Core
 
         return $iterator;
     }
+
+    /**
+     * @param null $scope
+     * @return Iterator
+     */
     public static function store($scope = null): Iterator
     {
         return static::get('store', new Iterator($scope));
     }
 
-    public static function faker(string $lng = 'fr_FR')
+    /**
+     * @param string $lng
+     * @return Generator
+     */
+    public static function faker(string $lng = 'fr_FR'): Generator
     {
         return Factory::create(config('faker.language', $lng));
     }
 
+    /**
+     * @param Closure $transaction
+     * @param Closure $onFail
+     * @param Closure $onSuccess
+     * @param string|null $uuid
+     * @return mixed
+     */
     public static function transaction(
         Closure $transaction,
         Closure $onFail,
@@ -380,7 +460,7 @@ class Core
      * @param string $namespace
      * @return Cache
      */
-    public static function dyndb(string $namespace = 'core')
+    public static function dyndb(string $namespace = 'core'): Cache
     {
         static $dbs = [];
 
@@ -392,11 +472,19 @@ class Core
         return $db;
     }
 
-    public static function http()
+    /**
+     * @return Http
+     */
+    public static function http(): Http
     {
         return app(Http::class);
     }
 
+    /**
+     * @param Db $db
+     * @param array $data
+     * @return Item
+     */
     public static function model(Db $db, array $data = []): Item
     {
         $namespace = config('modeler.item_class', 'DB\\Entities');
@@ -410,7 +498,12 @@ class Core
         return new $class($db, $data);
     }
 
-    public static function fullObjectToArray($object, bool $recursive = false)
+    /**
+     * @param $object
+     * @param bool $recursive
+     * @return array
+     */
+    public static function fullObjectToArray($object, bool $recursive = false): array
     {
         $original = (array) $object;
         $values = [];
@@ -428,15 +521,19 @@ class Core
         return $values;
     }
 
-    public static function uncamelize($string, $splitter = "_")
+    /**
+     * @param string $string
+     * @param string $splitter
+     * @return string
+     */
+    public static function uncamelize(string $string, string $splitter = "_"): string
     {
         $string = preg_replace('/(?!^)[[:upper:]][[:lower:]]/', '$0', preg_replace('/(?!^)[[:upper:]]+/', $splitter . '$0', $string));
 
         return Str::lower($string);
-
     }
 
-    public static function explodePluckParameters($value, $key)
+    public static function explodePluckParameters($value, $key): array
     {
         $value = is_string($value) ? explode('.', $value) : $value;
 
@@ -445,7 +542,13 @@ class Core
         return [$value, $key];
     }
 
-    public static function compare($actual, $operator = null, $value = null)
+    /**
+     * @param $actual
+     * @param null $operator
+     * @param null $value
+     * @return bool
+     */
+    public static function compare($actual, $operator = null, $value = null): bool
     {
         $nargs = func_num_args();
 
@@ -598,6 +701,10 @@ class Core
         return false;
     }
 
+    /**
+     * @param string $string
+     * @return bool
+     */
     public static function isUtf8(string $string): bool
     {
         if (!is_string($string)) {
@@ -621,6 +728,10 @@ class Core
         );
     }
 
+    /**
+     * @param string $string
+     * @return string|string[]
+     */
     public static function unaccent(string $string)
     {
         if (!preg_match('/[\x80-\xff]/', $string)) {
@@ -870,12 +981,22 @@ class Core
         return $string;
     }
 
-    public static function notSame($a, $b)
+    /**
+     * @param mixed $a
+     * @param mixed $b
+     * @return bool
+     */
+    public static function notSame($a, $b): bool
     {
         return $a !== $b;
     }
 
-    public static function pattern($array, $pattern = '*')
+    /**
+     * @param array $array
+     * @param string $pattern
+     * @return array
+     */
+    public static function pattern(array $array, string $pattern = '*'): array
     {
         $array = static::arrayable($array) ? $array->toArray() : $array;
 
@@ -898,6 +1019,12 @@ class Core
         return $collection;
     }
 
+    /**
+     * @param string $namespace
+     * @param string $userKey
+     * @param string|null $userModel
+     * @return Session
+     */
     public static function session(
         string $namespace = 'web',
         string $userKey = 'user',
@@ -906,7 +1033,12 @@ class Core
         return Session::getInstance($namespace, $userKey, $userModel);
     }
 
-    public static function exception($type, $message, $extends = Exception::class)
+    /**
+     * @param string $type
+     * @param string $message
+     * @param string $extends
+     */
+    public static function exception(string $type, string $message, string $extends = Exception::class)
     {
         $what   = ucfirst(Str::camel($type . '_exception'));
         $class  = 'Morbihanet\\Modeler\\' . $what;
@@ -923,7 +1055,7 @@ class Core
      * @param $concern
      * @return Bind
      */
-    public static function bind($concern)
+    public static function bind($concern): Bind
     {
         return new Bind($concern);
     }
@@ -939,6 +1071,12 @@ class Core
         return Modeler::factorModel($name);
     }
 
+    /**
+     * @param string $model
+     * @param string $controller
+     * @param mixed|null $middleware
+     * @param string|null $prefix
+     */
     public static function resourcesRoutes(
         string $model,
         string $controller,
@@ -993,7 +1131,11 @@ class Core
         }
     }
 
-    public static function bearer(string $name = 'app_bearer')
+    /**
+     * @param string $name
+     * @return string
+     */
+    public static function bearer(string $name = 'app_bearer'): string
     {
         if (!$cookie = Arr::get($_COOKIE, $name)) {
             $cookie = sha1(uniqid(sha1(uniqid(null, true)), true));
@@ -1004,7 +1146,10 @@ class Core
         return $cookie;
     }
 
-    public static function getToken()
+    /**
+     * @return string
+     */
+    public static function getToken(): string
     {
         /** @var MiddlewareCsrf $csrf */
         $csrf = static::get('csrf');
@@ -1012,6 +1157,10 @@ class Core
         return $csrf->generateToken();
     }
 
+    /**
+     * @param string $email
+     * @return bool
+     */
     public static function isValidEmail(string $email): bool
     {
         $pattern = sprintf('/^(?<local>%s)@(?<domain>%s)$/iD', static::EMAIL_REGEX_LOCAL, static::EMAIL_REGEX_DOMAIN);
@@ -1051,7 +1200,10 @@ class Core
         return $lines;
     }
 
-    public static function validator(): \Illuminate\Validation\Factory
+    /**
+     * @return ValidatorFactory
+     */
+    public static function validator(): ValidatorFactory
     {
         /** @var \Illuminate\Validation\Factory $factory */
         $factory = app(\Illuminate\Contracts\Validation\Factory::class);
@@ -1063,17 +1215,33 @@ class Core
         return $factory;
     }
 
+    /**
+     * @param array $data
+     * @param array $rules
+     * @param array $messages
+     * @param array $attributes
+     * @return array
+     */
     public static function validate(array $data, array $rules, array $messages = [], array $attributes = []): array
     {
         return static::validator()->make($data, $rules, $messages, $attributes)->validate();
     }
 
+    /**
+     * @param array $rules
+     * @param array $messages
+     * @param array $attributes
+     * @return array
+     */
     public static function validateRequest(array $rules, array $messages = [], array $attributes = []): array
     {
         return static::validate(request()->all(), $rules, $messages, $attributes);
     }
 
-    public static function csrf_field()
+    /**
+     * @return string
+     */
+    public static function csrf_field(): string
     {
         /** @var MiddlewareCsrf $csrf */
         $csrf = static::get('csrf');
