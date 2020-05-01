@@ -321,23 +321,15 @@ class RedisStore extends Db
      */
     public function whereNoCache($key, $operator = null, $value = null)
     {
-        $hashkey = sha1(serialize(func_get_args()));
+        $iterator   = $this->getEngine()->where($key, $operator, $value);
+        $ids        = [];
 
-        $ids = static::$__ids[get_called_class()][$hashkey] ?? function () use ($hashkey, $key, $operator, $value) {
-            $iterator   = $this->getEngine()->where($key, $operator, $value);
-            $ids        = [];
+        foreach ($iterator as $row) {
+            $ids[] = $row['id'];
+        }
 
-            foreach ($iterator as $row) {
-                $ids[] = $row['id'];
-            }
+        unset($iterator);
 
-            unset($iterator);
-
-            static::$__ids[get_called_class()][$hashkey] = $ids;
-
-            return $ids;
-        };
-
-        return $this->withIds(value($ids));
+        return $this->withIds($ids);
     }
 }

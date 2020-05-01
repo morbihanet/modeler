@@ -20,7 +20,7 @@ class Valued extends Modeler implements ArrayAccess
 
     public function offsetExists($offset)
     {
-        return $this->newQuery()->whereK($offset)->exists();
+        return $this->newQuery()->whereK($offset)->first() instanceof Item;
     }
 
     public function __isset($offset)
@@ -28,10 +28,15 @@ class Valued extends Modeler implements ArrayAccess
         return $this->offsetExists($offset);
     }
 
+    public function has($offset)
+    {
+        return $this->offsetExists($offset);
+    }
+
     public function offsetGet($offset)
     {
         if ($this->offsetExists($offset)) {
-            return $this->newQuery()->whereK($offset)->first()->value('v');
+            return value($this->newQuery()->whereK($offset)->first()->value('v'));
         }
 
         return null;
@@ -42,9 +47,46 @@ class Valued extends Modeler implements ArrayAccess
         return $this->offsetGet($offset);
     }
 
+    public function get($offset, $default = null)
+    {
+        return $this->offsetGet($offset) ?? value($default);
+    }
+
     public function offsetSet($k, $v)
     {
-        $this->newQuery()->firstOrCreate(compact('k'))->setV($v)->save();
+        /** @var null|Item $row */
+        if ($row = $this->newQuery()->whereK($k)->first()) {
+            $row->update(compact('v'));
+        } else {
+            $this->newQuery()->create(compact('k', 'v'));
+        }
+    }
+
+    public function set(string $key, $value): self
+    {
+        $this->offsetSet($key, $value);
+
+        return $this;
+    }
+
+    public function manySet(array $data): self
+    {
+        foreach ($data as $key => $value) {
+            $this->set($key, $value);
+        }
+
+        return $this;
+    }
+
+    public function manyGet(...$keys)
+    {
+        $results = [];
+
+        foreach ($keys as $key) {
+            $results[$key] = $this->get($key);
+        }
+
+        return $results;
     }
 
     public function __set(string $key, $value)
@@ -55,7 +97,7 @@ class Valued extends Modeler implements ArrayAccess
     public function offsetUnset($offset)
     {
         if ($this->offsetExists($offset)) {
-            $this->newQuery()->where('k', $offset)->first()->delete();
+            $this->newQuery()->whereK($offset)->first()->delete();
         }
     }
 
@@ -64,10 +106,24 @@ class Valued extends Modeler implements ArrayAccess
         $this->offsetUnset($offset);
     }
 
+    public function remove($offset): bool
+    {
+        $status = $this->offsetExists($offset);
+
+        $this->offsetUnset($offset);
+
+        return $status;
+    }
+
+    public function delete($offset): bool
+    {
+        return $this->remove($offset);
+    }
+
     /**
      * @param null|string|array $key
      * @param null|mixed $default
-     * @return $this|Iterator|mixed|null
+     * @return $this|Iterator|Item[]|mixed|null
      */
     public function __invoke($key = null, $default = null)
     {

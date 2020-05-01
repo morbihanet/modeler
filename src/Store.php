@@ -293,24 +293,16 @@ class Store extends Db
         ];
 
         if (!in_array($operator, $operators)) {
-            $hashkey = sha1(serialize(func_get_args()));
+            $iterator   = $this->getEngine()->where($key, $operator, $value);
+            $ids        = [];
 
-            $ids = self::$__ids[get_called_class()][$hashkey] ?? function () use ($hashkey, $key, $operator, $value) {
-                    $iterator   = $this->getEngine()->where($key, $operator, $value);
-                    $ids        = [];
+            foreach ($iterator as $row) {
+                $ids[] = $row['id'];
+            }
 
-                    foreach ($iterator as $row) {
-                        $ids[] = $row['id'];
-                    }
+            unset($iterator);
 
-                    unset($iterator);
-
-                    self::$__ids[get_called_class()][$hashkey] = $ids;
-
-                    return $ids;
-                };
-
-            return $this->withIds(value($ids));
+            return $this->withIds($ids);
         }
 
         $store = $this->__store;

@@ -2,11 +2,30 @@
 namespace Morbihanet\Modeler\Test;
 
 use Morbihanet\Modeler\Swap;
+use Morbihanet\Modeler\Core;
+use Morbihanet\Modeler\Config;
 use Morbihanet\Modeler\Schedule;
 use Morbihanet\Modeler\Scheduler;
 
 class Modeler extends TestCase
 {
+    /** @test */
+    public function it_should_be_valuable()
+    {
+        $config  = Core::config();
+        $config['foo'] = 'baz';
+        $config['bar'] = 'foo';
+        $config['baz'] = 'bar';
+
+        $this->assertSame('foo', Core::config()['bar']);
+        $this->assertSame('bar', Core::config()['baz']);
+        $this->assertSame('baz', Core::config()['foo']);
+        $this->assertSame(3, Config::count());
+        $this->assertSame(3, $config::count());
+
+        dd($config->manyGet('foo', 'bar', 'baz', 'dummy'));
+    }
+
     /** @test */
     public function it_should_be_swappable()
     {

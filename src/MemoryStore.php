@@ -260,36 +260,4 @@ class MemoryStore extends Db
     {
         return count(static::$data[$this->__prefix] ?? []);
     }
-
-    /**
-     * @param $key
-     * @param null $operator
-     * @param null $value
-     * @param bool $returnIterator
-     * @return Iterator|mixed|null
-     */
-    public function iwhere($key, $operator = null, $value = null)
-    {
-        $this->__where = true;
-        $this->__wheres[] = func_get_args();
-
-        $hashkey = sha1(serialize(func_get_args()));
-
-        $ids = static::$__ids[get_called_class()][$hashkey] ?? function () use ($hashkey, $key, $operator, $value) {
-            $iterator   = $this->getEngine()->where($key, $operator, $value);
-            $ids        = [];
-
-            foreach ($iterator as $row) {
-                $ids[] = $row['id'];
-            }
-
-            unset($iterator);
-
-            static::$__ids[get_called_class()][$hashkey] = $ids;
-
-            return $ids;
-        };
-
-        return $this->withIds(value($ids));
-    }
 }
