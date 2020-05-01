@@ -22,8 +22,6 @@ class Modeler extends TestCase
         $this->assertSame('baz', Core::config()['foo']);
         $this->assertSame(3, Config::count());
         $this->assertSame(3, $config::count());
-
-        dd($config->manyGet('foo', 'bar', 'baz', 'dummy'));
     }
 
     /** @test */
