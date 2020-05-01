@@ -268,7 +268,7 @@ class MemoryStore extends Db
      * @param bool $returnIterator
      * @return Iterator|mixed|null
      */
-    public function where($key, $operator = null, $value = null)
+    public function iwhere($key, $operator = null, $value = null)
     {
         $this->__where = true;
         $this->__wheres[] = func_get_args();

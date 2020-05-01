@@ -120,26 +120,36 @@ class Core
 
         $container = static::di();
         $dependancyClass = new ReflectionClass($class);
+        $dependancyClassName = $dependancyClass->getName();
+
+        if ($container->has($dependancyClassName)) {
+            return $container->get($dependancyClassName);
+        }
+
         $instanciable = $dependancyClass->isInstantiable();
 
         if ($instanciable) {
-            $constructorArguments = $dependancyClass->getConstructor()->getParameters();
+            if (null === ($constructor = $dependancyClass->getConstructor())) {
+                $instance = $dependancyClass->newInstanceWithoutConstructor();
+                $container->set($dependancyClassName, $instance);
 
-            if (empty($constructorArguments)) {
-                return $dependancyClass->newInstance();
+                return $instance;
             }
 
-            $dependancyClassName = $dependancyClass->getName();
+            $constructorArguments = $constructor->getParameters();
+
+            if (empty($constructorArguments)) {
+                $instance = $dependancyClass->newInstance();
+                $container->set($dependancyClassName, $instance);
+
+                return $instance;
+            }
 
             if (count($arguments) === count($constructorArguments)) {
                 $instance = $dependancyClass->newInstanceArgs($arguments);
                 $container->set($dependancyClassName, $instance);
 
                 return $instance;
-            }
-
-            if ($container->has($dependancyClassName)) {
-                return $container->get($dependancyClassName);
             }
 
             $params = [];
@@ -164,26 +174,30 @@ class Core
                 }
             }
 
-            try {
-                $instance = $dependancyClass->newInstanceArgs($params);
-                $container->set($dependancyClassName, $instance);
+            $params = array_merge($arguments, $params);
 
-                return $instance;
-            } catch (Exception $e) {
-                $interfaces = $dependancyClass->getInterfaces();
+            if (count($constructorArguments) === count($params)) {
+                try {
+                    $instance = $dependancyClass->newInstanceArgs($params);
+                    $container->set($dependancyClassName, $instance);
 
-                foreach ($interfaces as $interface) {
-                    $resolvedService = static::resolve($interface->getName());
+                    return $instance;
+                } catch (Exception $e) {
+                    $interfaces = $dependancyClass->getInterfaces();
 
-                    if (null !== $resolvedService) {
-                        $container->set($interface->getName(), $resolvedService);
+                    foreach ($interfaces as $interface) {
+                        $resolvedService = static::resolve($interface->getName());
 
-                        return $resolvedService;
+                        if (null !== $resolvedService) {
+                            $container->set($interface->getName(), $resolvedService);
+
+                            return $resolvedService;
+                        }
                     }
-                }
 
-                if ($parentClass = $dependancyClass->getParentClass()) {
-                    return static::resolve($parentClass->getName());
+                    if ($parentClass = $dependancyClass->getParentClass()) {
+                        return static::resolve($parentClass->getName());
+                    }
                 }
             }
         }
@@ -1069,6 +1083,21 @@ class Core
         $name = $item instanceof Item ? Str::lower(class_basename($item)) : Str::lower(static::uncamelize($item));
 
         return Modeler::factorModel($name);
+    }
+
+    public static function config()
+    {
+        return Config::getInstance();
+    }
+
+    public static function settings()
+    {
+        return Setting::getInstance();
+    }
+
+    public static function options()
+    {
+        return Option::getInstance();
     }
 
     /**

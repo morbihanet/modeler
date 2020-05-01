@@ -358,7 +358,7 @@ class Db
         $method = Core::uncamelize($name);
 
         if (fnmatch('where_*', $method)) {
-            return $this->where(str_replace('where_', '', $method), $arguments[0]);
+            return $this->where(str_replace('where_', '', $method), '=', $arguments[0]);
         }
 
         return $this->engine->{$name}(...$arguments);
@@ -525,16 +525,13 @@ class Db
     {
         $conditions = Core::arrayable($conditions) ? $conditions->toArray() : $conditions;
 
-        $q = $this;
-
         foreach ($conditions as $field => $value) {
-            /** @var Iterator $q */
-            $q = $q->where($field, $value);
+            $this->where($field, $value);
         }
 
-        $q->setModel($this->getEngine()->getModel());
+        $this->setModel($this->getEngine()->getModel());
 
-        if (null === ($row = $q->first())) {
+        if (null === ($row = $this->first())) {
             $row = $this->model($conditions)->save();
         }
 
@@ -921,20 +918,55 @@ class Db
 
         $hashkey = sha1(serialize(func_get_args()));
 
-        $ids = static::$__ids[get_called_class()][$hashkey] ?? function () use ($hashkey, $key, $operator, $value) {
-                $iterator   = $this->getEngine()->where($key, $operator, $value);
-                $ids        = [];
+        $nargs = func_num_args();
 
-                foreach ($iterator as $row) {
-                    $ids[] = $row['id'];
+        $isCallable = 1 === func_num_args() && is_callable($key);
+
+        if ($nargs === 1) {
+            if (is_array($key) && false === $isCallable) {
+                if (count($key) === 1) {
+                    $operator   = '=';
+                    $value      = array_values($key);
+                    $key        = array_keys($key);
+                } elseif (count($key) === 3) {
+                    [$key, $operator, $value] = $key;
                 }
+            }
+        } elseif ($nargs === 2) {
+            [$value, $operator] = [$operator, '='];
+        } elseif ($nargs === 3) {
+            [$key, $operator, $value] = func_get_args();
+        }
 
-                unset($iterator);
+        $operator = Str::lower($operator);
 
-                static::$__ids[get_called_class()][$hashkey] = $ids;
+        if (true === $isCallable) {
+            $iterator   = $this->getEngine()->where($key, $operator, $value);
+            $ids        = [];
 
-                return $ids;
-            };
+            foreach ($iterator as $row) {
+                $ids[] = $row['id'];
+            }
+
+            unset($iterator);
+
+            return $this->withIds($ids);
+        }
+
+        $ids = static::$__ids[get_called_class()][$hashkey] ?? function () use ($hashkey, $key, $operator, $value) {
+            $iterator   = $this->getEngine()->where($key, $operator, $value);
+            $ids        = [];
+
+            foreach ($iterator as $row) {
+                $ids[] = $row['id'];
+            }
+
+            unset($iterator);
+
+            static::$__ids[get_called_class()][$hashkey] = $ids;
+
+            return $ids;
+        };
 
         return $this->withIds(value($ids));
     }

@@ -748,13 +748,17 @@ class Modeler extends TestCase
         $tag1 = Tag::create(['name' => 'tag1']);
         $tag2 = Tag::create(['name' => 'tag2']);
         $notreDame = Book::create(['title' => 'Notre Dame de Paris', 'year' => 1831]);
+        $this->assertEquals(0, BookTag::count());
         $notreDame->sync($tag1);
+        $this->assertEquals(1, BookTag::count());
         $notreDame->sync($tag2);
-        $notreDame->sync($tag1);
+        $this->assertEquals(2, BookTag::count());
+        $p1 = $notreDame->sync($tag1, ['bar' => 'baz']);
         $notreDame->sync($tag2);
 
         $this->assertEquals(2, BookTag::count());
         $this->assertEquals('tag1', $notreDame->getPivots(Tag::class)->first()->name);
+        $this->assertEquals('baz', $p1->bar);
 
         $notreDame->detach($tag2);
 

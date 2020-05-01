@@ -3,7 +3,6 @@
 namespace Morbihanet\Modeler\Test;
 
 use Morbihanet\Modeler\Redis;
-use Morbihanet\Modeler\Database;
 use Morbihanet\Modeler\FileStore;
 use Morbihanet\Modeler\MemoryStore;
 use Illuminate\Database\Schema\Blueprint;

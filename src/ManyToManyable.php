@@ -21,8 +21,9 @@ namespace Morbihanet\Modeler;
          /** @var Db $db */
          $dbPivot = Core::getDb($pivot);
 
-         $pivotName = collect([ucfirst($db->getConcern(get_class($db))), ucfirst($db->getConcern(get_class($dbPivot)))])
-                 ->sort()->implode('');
+         $pivotName = collect(
+             [ucfirst($db->getConcern(get_class($db))), ucfirst($db->getConcern(get_class($dbPivot)))]
+         )->sort()->implode('');
 
          if (fnmatch('*_*_*', $pivotName)) {
              $dashes    = explode('_', $pivotName);
@@ -132,13 +133,13 @@ namespace Morbihanet\Modeler;
          $db = $this->getPivotModel($pivot);
          [$fk1, $fk2] = $this->getPivotKeys($pivot);
 
-         $item = $db->firstOrCreate([$fk1 => $this['id'], $fk2 => $pivot['id']]);
-
-         if (!empty($attributes)) {
-             $item->update($attributes);
+         foreach ($db->where($fk1, $this->getId())->cursor() as $item) {
+             if ($item->value($fk2) === $pivot->getId()) {
+                 $item->delete();
+             }
          }
 
-         return $item;
+         return $db->create(array_merge([$fk1 => $this['id'], $fk2 => $pivot['id']], $attributes));
      }
 
      /**
