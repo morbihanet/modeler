@@ -115,6 +115,7 @@ use Faker\Generator as Faker;
  * @method static bool commit()
  * @method static bool rollback()
  * @method static string toJson()
+ * @method static Iterator all()
  * @method static void proxy(string $method)
  * @method static mixed transaction(\Closure $callback, int $attempts = 1)
  * @method static array morphedByMany(string $morphClass, string $morphName)
@@ -197,10 +198,7 @@ class Modeler
 
     public function __call(string $name, array $arguments)
     {
-        Core::set('modeler', $class = get_called_class());
-        $model = static::getModelName($class);
-
-        return static::factorModel($model)->{$name}(...$arguments);
+        return static::__callStatic($name, $arguments);
     }
 
     public static function setStore(string $store)
@@ -340,5 +338,16 @@ class Modeler
         eval($code);
 
         return new $class;
+    }
+
+    /**
+     * @param bool $authenticable
+     * @return Modeler
+     */
+    public function setAuthenticable(bool $authenticable): Modeler
+    {
+        $this->authenticable = $authenticable;
+
+        return $this;
     }
 }
