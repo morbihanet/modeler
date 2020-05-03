@@ -133,10 +133,15 @@ class Iterator implements IteratorAggregate
         return !$this->getIterator()->valid();
     }
 
+    public function all(): array
+    {
+        return $this->toArray();
+    }
+
     /**
      * @return array
      */
-    public function toArray()
+    public function toArray(): array
     {
         if (is_array($this->scope)) {
             return $this->scope;
@@ -150,7 +155,7 @@ class Iterator implements IteratorAggregate
         return json_encode($this->toArray(), $option);
     }
 
-    public function __toString()
+    public function __toString(): string
     {
         return $this->toJson();
     }
@@ -159,7 +164,7 @@ class Iterator implements IteratorAggregate
      * @param  string  $method
      * @return void
      */
-    public static function proxy(string $method): void
+    public static function proxify(string $method): void
     {
         static::$proxies[] = $method;
     }

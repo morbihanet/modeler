@@ -15,6 +15,8 @@ abstract class TestCase extends Orchestra
     {
         parent::setUp();
         $this->setUpDatabase();
+
+        $this->app['config']->set('database.redis.client', 'predis');
         Redis::engine(new Mock);
 
         $this->app['config']->set('database.connections.db_memory', [

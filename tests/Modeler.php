@@ -382,6 +382,28 @@ class Modeler extends TestCase
     }
 
     /** @test */
+    public function it_should_be_item_by_model()
+    {
+        $db = db_model('book');
+        $db::create(['title' => 'Les Fleurs du Mal', 'year' => 1867]);
+
+        $book = $db::find(1);
+
+        $this->assertEquals(\App\Entities\Book::class, get_class($book));
+    }
+
+    /** @test */
+    public function it_should_be_item_redis_model()
+    {
+        $db = redis_model('book');
+        $db::create(['title' => 'Les Fleurs du Mal', 'year' => 1867]);
+
+        $book = $db::find(1);
+
+        $this->assertEquals(\App\Entities\RedisBook::class, get_class($book));
+    }
+
+    /** @test */
     public function it_should_be_item_redis()
     {
         RedisBook::create(['title' => 'Les Fleurs du Mal', 'year' => 1867]);
@@ -425,6 +447,23 @@ class Modeler extends TestCase
         $this->assertEquals(1, Book::where('year', '>', 1850)->count());
         $this->assertEquals(1, Book::like('title', '%Fleurs%')->count());
         $this->assertEquals(1, Book::likeI('title', '%fleurs%')->count());
+    }
+
+    /** @test */
+    public function it_should_be_searchable_by_model()
+    {
+        $db = db_model('book');
+        $db::create(['title' => 'Les Fleurs du Mal', 'year' => 1867]);
+        $db::create(['title' => 'Notre Dame de Paris', 'year' => 1831]);
+
+        $this->assertEquals(2, $db::where('year', '<', 1900)->count());
+        $this->assertEquals(2, $db::lt('year', 1900)->count());
+        $this->assertEquals(2, $db::where('year', '>', 1800)->count());
+        $this->assertEquals(2, $db::gt('year', 1800)->count());
+        $this->assertEquals(1, $db::where('year', '<', 1850)->count());
+        $this->assertEquals(1, $db::where('year', '>', 1850)->count());
+        $this->assertEquals(1, $db::like('title', '%Fleurs%')->count());
+        $this->assertEquals(1, $db::likeI('title', '%fleurs%')->count());
     }
 
     /** @test */
@@ -476,14 +515,38 @@ class Modeler extends TestCase
     }
 
     /** @test */
+    public function it_should_calculate_by_model()
+    {
+        $hugo = db_model('author')::create(['name' => 'Victor Hugo']);
+        $baudelaire = db_model('author')::create(['name' => 'Charles Baudelaire']);
+
+        db_model('book')::create(['title' => 'Notre Dame de Paris', 'year' => 1831, 'author_id' => $hugo->id]);
+        db_model('book')::create(['title' => 'Les Contemplations', 'year' => 1855, 'author_id' => $hugo->id]);
+        db_model('book')::create(['title' => 'Les Fleurs du Mal', 'year' => 1867, 'author_id' => $baudelaire->id]);
+
+        $this->assertEquals(3, db_model('author')::sum('id'));
+        $this->assertEquals(1.5, db_model('author')::avg('id'));
+        $this->assertEquals(6, db_model('book')::sum('id'));
+        $this->assertEquals(2, db_model('book')::avg('id'));
+
+        $this->assertEquals(1, db_model('author')::min('id'));
+        $this->assertEquals(2, db_model('author')::max('id'));
+        $this->assertEquals(1, db_model('book')::min('id'));
+        $this->assertEquals(3, db_model('book')::max('id'));
+
+        $this->assertEquals(3, $hugo->books->sum('id'));
+        $this->assertEquals(3, $baudelaire->books->sum('id'));
+    }
+
+    /** @test */
     public function it_should_calculate()
     {
         $hugo = Author::create(['name' => 'Victor Hugo']);
         $baudelaire = Author::create(['name' => 'Charles Baudelaire']);
 
-        $notreDame = Book::create(['title' => 'Notre Dame de Paris', 'year' => 1831, 'author_id' => $hugo->id]);
-        $contemplations = Book::create(['title' => 'Les Contemplations', 'year' => 1855, 'author_id' => $hugo->id]);
-        $fleurs = Book::create(['title' => 'Les Fleurs du Mal', 'year' => 1867, 'author_id' => $baudelaire->id]);
+        Book::create(['title' => 'Notre Dame de Paris', 'year' => 1831, 'author_id' => $hugo->id]);
+        Book::create(['title' => 'Les Contemplations', 'year' => 1855, 'author_id' => $hugo->id]);
+        Book::create(['title' => 'Les Fleurs du Mal', 'year' => 1867, 'author_id' => $baudelaire->id]);
 
         $this->assertEquals(3, Author::sum('id'));
         $this->assertEquals(1.5, Author::avg('id'));
@@ -495,10 +558,6 @@ class Modeler extends TestCase
         $this->assertEquals(1, Book::min('id'));
         $this->assertEquals(3, Book::max('id'));
 
-        $this->assertEquals(1, $notreDame->author->sum('id'));
-        $this->assertEquals(1, $contemplations->author->sum('id'));
-        $this->assertEquals(2, $fleurs->author->sum('id'));
-
         $this->assertEquals(3, $hugo->books->sum('id'));
         $this->assertEquals(3, $baudelaire->books->sum('id'));
     }
@@ -509,18 +568,18 @@ class Modeler extends TestCase
         $hugo = RedisAuthor::create(['name' => 'Victor Hugo']);
         $baudelaire = RedisAuthor::create(['name' => 'Charles Baudelaire']);
 
-        $notreDame = RedisBook::create([
+        RedisBook::create([
             'title' => 'Notre Dame de Paris',
             'year' => 1831, 'redis_author_id' => $hugo->id
         ]);
 
-        $contemplations = RedisBook::create([
+        RedisBook::create([
             'title' => 'Les Contemplations',
             'year' => 1855,
             'redis_author_id' => $hugo->id
         ]);
 
-        $fleurs = RedisBook::create([
+        RedisBook::create([
             'title' => 'Les Fleurs du Mal',
             'year' => 1867,
             'redis_author_id' => $baudelaire->id
@@ -535,10 +594,6 @@ class Modeler extends TestCase
         $this->assertEquals(2, RedisAuthor::max('id'));
         $this->assertEquals(1, RedisBook::min('id'));
         $this->assertEquals(3, RedisBook::max('id'));
-
-        $this->assertEquals(1, $notreDame->redis_author->sum('id'));
-        $this->assertEquals(1, $contemplations->redis_author->sum('id'));
-        $this->assertEquals(2, $fleurs->redis_author->sum('id'));
 //
         $this->assertEquals(3, $baudelaire->redis_books->sum('id'));
         $this->assertEquals(3, $hugo->redis_books->sum('id'));
@@ -550,18 +605,18 @@ class Modeler extends TestCase
         $hugo = MemoryAuthor::create(['name' => 'Victor Hugo']);
         $baudelaire = MemoryAuthor::create(['name' => 'Charles Baudelaire']);
 
-        $notreDame = MemoryBook::create([
+        MemoryBook::create([
             'title' => 'Notre Dame de Paris',
             'year' => 1831, 'memory_author_id' => $hugo->id
         ]);
 
-        $contemplations = MemoryBook::create([
+        MemoryBook::create([
             'title' => 'Les Contemplations',
             'year' => 1855,
             'memory_author_id' => $hugo->id
         ]);
 
-        $fleurs = MemoryBook::create([
+        MemoryBook::create([
             'title' => 'Les Fleurs du Mal',
             'year' => 1867,
             'memory_author_id' => $baudelaire->id
@@ -577,10 +632,6 @@ class Modeler extends TestCase
         $this->assertEquals(1, MemoryBook::min('id'));
         $this->assertEquals(3, MemoryBook::max('id'));
 
-        $this->assertEquals(1, $notreDame->memory_author->sum('id'));
-        $this->assertEquals(1, $contemplations->memory_author->sum('id'));
-        $this->assertEquals(2, $fleurs->memory_author->sum('id'));
-
         $this->assertEquals(3, $baudelaire->memory_books->sum('id'));
         $this->assertEquals(3, $hugo->memory_books->sum('id'));
     }
@@ -591,19 +642,19 @@ class Modeler extends TestCase
         $hugo = FileAuthor::create(['name' => 'Victor Hugo']);
         $baudelaire = FileAuthor::create(['name' => 'Charles Baudelaire']);
 
-        $notreDame = FileBook::create([
+        FileBook::create([
             'title' => 'Notre Dame de Paris',
             'year' => 1831,
             'file_author_id' => $hugo->id
         ]);
 
-        $contemplations = FileBook::create([
+        FileBook::create([
             'title' => 'Les Contemplations',
             'year' => 1855,
             'file_author_id' => $hugo->id
         ]);
 
-        $fleurs = FileBook::create([
+        FileBook::create([
             'title' => 'Les Fleurs du Mal',
             'year' => 1867,
             'file_author_id' => $baudelaire->id
@@ -619,12 +670,22 @@ class Modeler extends TestCase
         $this->assertEquals(1, FileBook::min('id'));
         $this->assertEquals(3, FileBook::max('id'));
 
-        $this->assertEquals(1, $notreDame->file_author->sum('id'));
-        $this->assertEquals(1, $contemplations->file_author->sum('id'));
-        $this->assertEquals(2, $fleurs->file_author->sum('id'));
-
         $this->assertEquals(3, $baudelaire->file_books->sum('id'));
         $this->assertEquals(3, $hugo->file_books->sum('id'));
+    }
+
+    /** @test */
+    public function it_should_be_groupable_by_model()
+    {
+        $hugo = db_model('author', ['name' => 'Victor Hugo'])->save();
+        $baudelaire = db_model('author', ['name' => 'Charles Baudelaire'])->save();
+
+        db_model('book', ['title' => 'Notre Dame de Paris', 'year' => 1831, 'author_id' => $hugo->id])->save();
+        db_model('book', ['title' => 'Les Contemplations', 'year' => 1855, 'author_id' => $hugo->id])->save();
+        db_model('book', ['title' => 'Les Fleurs du Mal', 'year' => 1867, 'author_id' => $baudelaire->id])->save();
+
+        $group = db_model('book')->groupBy('author_id');
+        $this->assertEquals(2, $group->count());
     }
 
     /** @test */
@@ -670,7 +731,7 @@ class Modeler extends TestCase
     }
 
     /** @test */
-    public function it_should_be_groupable_filr()
+    public function it_should_be_groupable_file()
     {
         $hugo = FileAuthor::create(['name' => 'Victor Hugo']);
         $baudelaire = FileAuthor::create(['name' => 'Charles Baudelaire']);
@@ -681,6 +742,23 @@ class Modeler extends TestCase
 
         $group = FileBook::groupBy('file_author_id');
         $this->assertEquals(2, $group->count());
+    }
+
+    /** @test */
+    public function it_should_be_sortable_by_model()
+    {
+        $hugo = db_model('author')::create(['name' => 'Victor Hugo']);
+        sleep(1);
+        $baudelaire = db_model('author')::create(['name' => 'Charles Baudelaire']);
+
+        db_model('book')::create(['title' => 'Notre Dame de Paris', 'year' => 1831, 'author_id' => $hugo->id]);
+        db_model('book')::create(['title' => 'Les Contemplations', 'year' => 1855, 'author_id' => $hugo->id]);
+        db_model('book')::create(['title' => 'Les Fleurs du Mal', 'year' => 1867, 'author_id' => $baudelaire->id]);
+
+        $this->assertEquals(2, db_model('author')::latest()->first()->id);
+        $this->assertEquals(1, db_model('author')::oldest()->first()->id);
+        $this->assertEquals('Les Contemplations', db_model('book')::sortBy('title')->first()->title);
+        $this->assertEquals('Notre Dame de Paris', db_model('book')::sortByDesc('title')->first()->title);
     }
 
     /** @test */
@@ -758,6 +836,30 @@ class Modeler extends TestCase
         $this->assertEquals('Les Contemplations', FileBook::sortBy('title')->first()->title);
         $this->assertEquals('Notre Dame de Paris', FileBook::sortByDesc('title')->first()->title);
     }
+
+    /** @test */
+    public function it_should_be_manytomanyable_by_model()
+    {
+        $tag1 = db_model('hyper_test_super_tag')::create(['name' => 'tag1']);
+        $tag2 = db_model('hyper_test_super_tag')::create(['name' => 'tag2']);
+        $notreDame = db_model('hyper_test_super_book')::create(['title' => 'Notre Dame de Paris', 'year' => 1831]);
+        $this->assertEquals(0, db_model('hyper_test_super_book_tag')::count());
+        $notreDame->sync($tag1);
+        $this->assertEquals(1, db_model('hyper_test_super_book_tag')::count());
+        $notreDame->sync($tag2);
+        $this->assertEquals(2, db_model('hyper_test_super_book_tag')::count());
+        $p1 = $notreDame->sync($tag1, ['bar' => 'baz']);
+        $notreDame->sync($tag2);
+
+        $this->assertEquals(2, db_model('hyper_test_super_book_tag')::count());
+        $this->assertEquals('tag1', $notreDame->getPivots(get_class(db_model('hyper_test_super_tag')))->first()->name);
+        $this->assertEquals('baz', $p1->bar);
+
+        $notreDame->detach($tag2);
+
+        $this->assertEquals(1, db_model('hyper_test_super_book_tag')::count());
+    }
+
 
     /** @test */
     public function it_should_be_manytomanyable()
@@ -840,6 +942,16 @@ class Modeler extends TestCase
     }
 
     /** @test */
+    public function it_should_be_selectable_by_model()
+    {
+        db_model('dummy')::create(['name' => 'foo', 'label' => 'bar']);
+        $row = db_model('dummy')::select('name')->first();
+
+        $this->assertArrayNotHasKey('label', $row->toArray());
+        $this->assertArrayNotHasKey('created_at', $row->toArray());
+    }
+
+    /** @test */
     public function it_should_be_selectable()
     {
         Dummy::create(['name' => 'foo', 'label' => 'bar']);
@@ -877,6 +989,26 @@ class Modeler extends TestCase
 
         $this->assertArrayNotHasKey('label', $row->toArray());
         $this->assertArrayNotHasKey('created_at', $row->toArray());
+    }
+
+    /** @test */
+    public function it_should_have_relations_by_model()
+    {
+        $hugo = db_model('author')::create(['name' => 'Victor Hugo']);
+        $baudelaire = db_model('author')::create(['name' => 'Charles Baudelaire']);
+
+        $notreDame = db_model('book')::create([
+            'title' => 'Notre Dame de Paris', 'year' => 1831, 'author_id' =>
+            $hugo->id
+        ]);
+        $contemplations = db_model('book')::create(['title' => 'Les Contemplations', 'year' => 1855, 'author_id' => $hugo->id]);
+        $fleurs = db_model('book')::create(['title' => 'Les Fleurs du Mal', 'year' => 1867, 'author_id' => $baudelaire->id]);
+
+        $this->assertEquals($hugo->id, $notreDame->author->id);
+        $this->assertEquals($hugo->id, $contemplations->author->id);
+        $this->assertEquals($baudelaire->id, $fleurs->author->id);
+        $this->assertEquals(2, $hugo->books->count());
+        $this->assertEquals(1, $baudelaire->books->count());
     }
 
     /** @test */

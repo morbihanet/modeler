@@ -27,6 +27,8 @@ class Db
     /** @var Iterator */
     protected $engine;
 
+    protected ?Modeler $modeler = null;
+
     /** @var array */
     protected array $withQuery = [];
 
@@ -655,6 +657,18 @@ class Db
         return $this->__cache;
     }
 
+    public function getModeler(): ?Modeler
+    {
+        return $this->modeler;
+    }
+
+    public function setModeler(?Modeler $modeler): self
+    {
+        $this->modeler = $modeler;
+
+        return $this;
+    }
+
     /**
      * @param mixed $concern
      * @return string
@@ -854,7 +868,7 @@ class Db
     {
         $record = $record ?? Core::get('item_record');
 
-        $concern = $fk ?? $this->getConcern($relation) . '_id';;
+        $concern = $fk ?? $this->getConcern($relation) . '_id';
 
         /** @var Db $model */
         $model = new $relation;
@@ -880,13 +894,34 @@ class Db
             ->sort()->implode('');
 
         if (fnmatch('*_*_*', $pivotName)) {
-            $dashes = explode('_', $pivotName);
-            $parts  = explode('_', $pivotName, count($dashes) - 1);
-            $suffix = array_shift($parts);
-            $part   = array_pop($parts);
-            $part   = str_replace($suffix, '', $part);
+            $first = $last = null;
+            $all = explode('_', $pivotName);
+            $count = count($all);
+            $last = array_pop($all);
 
-            $pivotName = ucfirst(Str::camel(Str::lower($suffix) . '_' . $part));
+            for ($i = 0; $i < $count; ++$i) {
+                $seg = $all[$i];
+
+                if (fnmatch('*_*', $uncamelized = Core::uncamelize($seg))) {
+                    $parts = explode('_', $uncamelized);
+                    $first = current($parts);
+
+                    break;
+                }
+            }
+
+            $builder = [];
+
+            if ($i > 0 && $i < $count - 1) {
+                for ($j = 0; $j < $i; ++$j) {
+                    $builder[] = Str::lower($all[$j]);
+                }
+            }
+
+            $builder[] = $first;
+            $builder[] = $last;
+
+            $pivotName = ucfirst(Str::camel(implode('_', $builder)));
         }
 
         /** @var Db $model */

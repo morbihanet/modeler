@@ -8,10 +8,11 @@ class Item extends Record
 {
     use ManyToManyable, Notifiable, Morphable;
 
+    protected ?Db $db = null;
+    protected array $original = [];
+
     public function __construct(Db $db, array $options = [])
     {
-        unset($options['__db'], $options['__original']);
-
         if ($id = $options['id'] ?? null) {
             unset($options['id']);
             $options = array_merge(['id' => $id], $options);
@@ -19,9 +20,10 @@ class Item extends Record
 
         parent::__construct($options);
 
-        $this['__db'] = $db;
+        $this->db = $db;
+        $this->original = $options;
+
         Core::set('item_db', $db);
-        $this['__original'] = $options;
         Core::set('item_record', $this);
     }
 
@@ -30,7 +32,7 @@ class Item extends Record
      */
     public function original(): self
     {
-        return new self($this['__db'] ?? Core::getDb($this), $this['__original']);
+        return new self($this->db ?? Core::getDb($this), $this->original);
     }
 
     /**
@@ -92,10 +94,7 @@ class Item extends Record
      */
     public function isDirty(): bool
     {
-        /** @var array $original */
-        $original = $this['__original'];
-
-        return $original !== $this->toArray();
+        return $this->original !== $this->toArray();
     }
 
     /**
@@ -103,10 +102,7 @@ class Item extends Record
      */
     public function isClean(): bool
     {
-        /** @var array $original */
-        $original = $this['__original'];
-
-        return $original === $this->toArray();
+        return $this->original === $this->toArray();
     }
 
     /**
@@ -116,10 +112,7 @@ class Item extends Record
     {
         $dirty = [];
 
-        /** @var array $original */
-        $original = $this['__original'];
-
-        foreach ($original as $key => $value) {
+        foreach ($this->original as $key => $value) {
             if ($value !== $this[$key]) {
                 $dirty[$key] = $value;
             }
@@ -135,10 +128,7 @@ class Item extends Record
     {
         $clean = [];
 
-        /** @var array $original */
-        $original = $this['__original'];
-
-        foreach ($original as $key => $value) {
+        foreach ($this->original as $key => $value) {
             if ($value === $this[$key]) {
                 $clean[$key] = $value;
             }
@@ -153,15 +143,12 @@ class Item extends Record
      */
     public function save(?callable $callback = null)
     {
-        /** @var array $original */
-        $original = $this['__original'];
-
-        if ($original === $this->toArray() && $this->exists()) {
+        if ($this->original === $this->toArray() && $this->exists()) {
             return $this;
         }
 
         /** @var Db $db */
-        $db = $this['__db'] ?? Core::getDb($this);
+        $db = $this->db ?? Core::getDb($this);
 
         if ($db) {
             $methods = get_class_methods($db);
@@ -183,7 +170,7 @@ class Item extends Record
     public function delete(?callable $callback = null)
     {
         /** @var Db $db */
-        $db = $this['__db'] ?? Core::getDb($this);
+        $db = $this->db ?? Core::getDb($this);
 
         return $db->delete($this, $callback);
     }
@@ -202,7 +189,7 @@ class Item extends Record
      */
     public function copy(array $toMerge = [])
     {
-        $db = $this['__db'] ?? Core::getDb($this);
+        $db = $this->db ?? Core::getDb($this);
 
         unset($this["id"], $this["created_at"], $this["updated_at"], $this["deleted_at"]);
 
@@ -222,7 +209,7 @@ class Item extends Record
     {
         if ($this->exists()) {
             /** @var Db $db */
-            $db = $this['__db'] ?? Core::getDb($this);
+            $db = $this->db ?? Core::getDb($this);
 
             return sprintf(
                 "%s:%s:%s",
@@ -281,7 +268,6 @@ class Item extends Record
         $this->set($offset, $value);
     }
 
-
     public function set($name, $value)
     {
         $method = Str::camel('set_' . Str::lower($name) . '_attribute');
@@ -299,6 +285,14 @@ class Item extends Record
     {
         $values = $this->toArray();
 
+        if ('wasRecentlyCreated' === $name) {
+            if ($this->exists()) {
+                return time() - $values['created_at'] <= 60;
+            }
+
+            return false;
+        }
+
         $method = Str::camel('get_' . Str::lower($name) . '_attribute');
 
         if (in_array($method, get_class_methods($modeler = $this->modeler()))) {
@@ -306,7 +300,7 @@ class Item extends Record
         }
 
         /** @var Db|null $db */
-        $db = $values['__db'] ?? Core::getDb($this) ?? null;
+        $db = $this->db ?? Core::getDb($this) ?? null;
 
         if (null === $db) {
             return parent::get($name, $default);
@@ -359,16 +353,16 @@ class Item extends Record
             return $modeler->{$name}(...$arguments);
         }
 
+        $values = $this->toArray();
+
         /** @var Db|null $db */
-        $db = $values['__db'] ?? Core::getDb($this) ?? null;
+        $db = $this->db ?? Core::getDb($this) ?? null;
 
         if (is_object($db) && in_array($name, get_class_methods($db))) {
             $arguments[] = $this;
 
             return $db->{$name}(...$arguments);
         }
-
-        $values = $this->toArray();
 
         if (!array_key_exists($name, $values)) {
             if (fnmatch('*s', $name) && !isset($values[$name . '_id'])) {
@@ -406,11 +400,9 @@ class Item extends Record
     public function toArray(): array
     {
         /** @var Db $db */
-        $db = Core::fullObjectToArray($this)['options']['__db'] ?? Core::get('item_db');
+        $db = Core::fullObjectToArray($this)['db'] ?? Core::get('item_db');
 
         $row = parent::toArray();
-
-        unset($row['__db'], $row['__original']);
 
         $with = $db->getWithQuery();
 
@@ -456,5 +448,13 @@ class Item extends Record
         }
 
         return null;
+    }
+
+    /**
+     * @return Db|null
+     */
+    public function getDb(): ?Db
+    {
+        return $this->db;
     }
 }

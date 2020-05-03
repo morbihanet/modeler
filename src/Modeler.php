@@ -149,6 +149,7 @@ class Modeler
     protected static string $store = Store::class;
     public static string $connection = 'default';
     protected static array $booted = [];
+    protected static array $rules = [];
     protected bool $authenticable = false;
 
     public function __construct()
@@ -284,6 +285,27 @@ class Modeler
     }
 
     /**
+     * @return array
+     */
+    protected static function rules(array $rules): array
+    {
+        static::$rules = array_merge(static::$rules, $rules);
+
+        return static::$rules;
+    }
+
+    public static function validate(): ?array
+    {
+        if (!empty(static::$rules)) {
+            $validator = Core::validator();
+
+            return $validator->validate(request()->all(), static::$rules);
+        }
+
+        return null;
+    }
+
+    /**
      * @return Store|FileStore|RedisStore|MemoryStore
      */
     public static function getDb()
@@ -294,13 +316,34 @@ class Modeler
     public static function getModelName(string $model)
     {
         if (fnmatch('*_*_*', $model)) {
-            $dashes = explode('_', $model);
-            $parts  = explode('_', $model, count($dashes) - 1);
-            $suffix = array_shift($parts);
-            $part   = array_pop($parts);
-            $part   = str_replace($suffix, '', $part);
+            $first = $last = null;
+            $all = explode('_', $model);
+            $count = count($all);
+            $last = array_pop($all);
 
-            return ucfirst(Str::camel(Str::lower($suffix) . '_' . $part));
+            for ($i = 0; $i < $count; ++$i) {
+                $seg = $all[$i];
+
+                if (fnmatch('*_*', $uncamelized = Core::uncamelize($seg))) {
+                    $parts = explode('_', $uncamelized);
+                    $first = current($parts);
+
+                    break;
+                }
+            }
+
+            $builder = [];
+
+            if ($i > 0 && $i < $count - 1) {
+                for ($j = 0; $j < $i; ++$j) {
+                    $builder[] = Str::lower($all[$j]);
+                }
+            }
+
+            $builder[] = $first;
+            $builder[] = $last;
+
+            return ucfirst(Str::camel(implode('_', $builder)));
         }
 
         return Str::lower(Core::uncamelize(Arr::last(explode('\\', $model))));

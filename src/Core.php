@@ -502,6 +502,7 @@ class Core
     public static function model(Db $db, array $data = []): Item
     {
         $namespace = config('modeler.item_class', 'DB\\Entities');
+
         $class = $namespace . '\\' . $cb = class_basename($db);
 
         if (!class_exists($class)) {

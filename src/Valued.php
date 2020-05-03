@@ -20,7 +20,7 @@ class Valued extends Modeler implements ArrayAccess
 
     public function offsetExists($offset)
     {
-        return $this->newQuery()->whereK($offset)->first() instanceof Item;
+        return $this->whereK($offset)->first() instanceof Item;
     }
 
     public function __isset($offset)
@@ -36,7 +36,7 @@ class Valued extends Modeler implements ArrayAccess
     public function offsetGet($offset)
     {
         if ($this->offsetExists($offset)) {
-            return value($this->newQuery()->whereK($offset)->first()->value('v'));
+            return value($this->whereK($offset)->first()->value('v'));
         }
 
         return null;
@@ -55,10 +55,10 @@ class Valued extends Modeler implements ArrayAccess
     public function offsetSet($k, $v)
     {
         /** @var null|Item $row */
-        if ($row = $this->newQuery()->whereK($k)->first()) {
+        if ($row = $this->whereK($k)->first()) {
             $row->update(compact('v'));
         } else {
-            $this->newQuery()->create(compact('k', 'v'));
+            $this->create(compact('k', 'v'));
         }
     }
 
@@ -97,7 +97,7 @@ class Valued extends Modeler implements ArrayAccess
     public function offsetUnset($offset)
     {
         if ($this->offsetExists($offset)) {
-            $this->newQuery()->whereK($offset)->first()->delete();
+            $this->whereK($offset)->first()->delete();
         }
     }
 
@@ -128,7 +128,7 @@ class Valued extends Modeler implements ArrayAccess
     public function __invoke($key = null, $default = null)
     {
         if (is_null($key)) {
-            return $this->newQuery()->cursor();
+            return $this->cursor();
         }
 
         if (is_array($key)) {
