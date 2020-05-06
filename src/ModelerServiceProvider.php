@@ -9,6 +9,8 @@ class ModelerServiceProvider extends ServiceProvider
 {
     public function boot()
     {
+        Core::app($this->app);
+
         $this->registerMigrations();
         $this->registerPublishing();
 

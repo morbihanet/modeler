@@ -27,7 +27,7 @@ class Db
     /** @var Iterator */
     protected $engine;
 
-    protected ?Modeler $modeler = null;
+    protected ?string $modeler = null;
 
     /** @var array */
     protected array $withQuery = [];
@@ -59,6 +59,7 @@ class Db
     public function __construct(Iterator $engine)
     {
         $this->engine = $engine;
+        $this->modeler = core::get('modeler');
 
         if (!isset(static::$__booted[$class = get_called_class()])) {
             static::$__booted[$class] = true;
@@ -345,7 +346,7 @@ class Db
         }
 
         /** @var Modeler $modeler */
-        $modeler = app(Core::get('modeler'));
+        $modeler = app($this->modeler);
 
         if (in_array($name, get_class_methods($modeler))) {
             $arguments[] = $this;
@@ -657,12 +658,12 @@ class Db
         return $this->__cache;
     }
 
-    public function getModeler(): ?Modeler
+    public function getModeler(): ?string
     {
         return $this->modeler;
     }
 
-    public function setModeler(?Modeler $modeler): self
+    public function setModeler(?string $modeler = null): self
     {
         $this->modeler = $modeler;
 
@@ -996,6 +997,11 @@ class Db
         unset($iterator);
 
         return $this->withIds($ids);
+    }
+
+    public function pluckWhere(string $key, $value, string $pluckValue = 'id', ?string $pluckKey = null)
+    {
+        return $this->where($key, $value)->pluck($pluckValue, $pluckKey)->toArray();
     }
 
     /**

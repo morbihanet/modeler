@@ -4,11 +4,28 @@ namespace Morbihanet\Modeler\Test;
 use Morbihanet\Modeler\Swap;
 use Morbihanet\Modeler\Core;
 use Morbihanet\Modeler\Config;
+use Morbihanet\Modeler\Valued;
 use Morbihanet\Modeler\Schedule;
 use Morbihanet\Modeler\Scheduler;
 
 class Modeler extends TestCase
 {
+    /** @test */
+    public function it_should_be_resolvable()
+    {
+        $bag = resolver('bag', function () {
+            return new Valued;
+        });
+
+        $bag2 = resolver('bag2', new Valued);
+
+        $bag->set('bar', 'baz');
+        $bag2->set('baz', 'bar');
+
+        $this->assertNotSame($bag::resolver(), $bag2::resolver());
+        $this->assertSame($bag2->get($bag->get('bar')), $bag2->get('baz'));
+    }
+
     /** @test */
     public function it_should_be_valuable()
     {

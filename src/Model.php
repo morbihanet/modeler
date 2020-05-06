@@ -6,6 +6,8 @@ use ArrayAccess;
 class Model extends Modeler implements ArrayAccess
 {
     protected ?Item $item = null;
+    protected array $guarded = [];
+    protected array $fillable = [];
 
     public function __construct(array $attributes = [])
     {
@@ -72,6 +74,57 @@ class Model extends Modeler implements ArrayAccess
         $class = $this->itemClass();
 
         return new $class(static::getDb(), $attributes);
+    }
+
+    public function guarded(array $guarded): Model
+    {
+        $this->guarded = $guarded;
+
+        return $this;
+    }
+
+    public function fillable(array $fillable): Model
+    {
+        $this->fillable = $fillable;
+
+        return $this;
+    }
+
+    public function save(?callable $callback = null)
+    {
+        $data = $this->item->toArray();
+
+        if ($this->item->exists()) {
+            unset($data['id']);
+            unset($data['created_at']);
+            unset($data['updated_at']);
+        }
+
+        $keys = array_keys($data);
+
+        if (empty($this->guarded)) {
+            if (!empty($this->fillable) && $this->fillable !== $keys) {
+                foreach ($keys as $key) {
+                    if (!in_array($key, $this->fillable)) {
+                        Core::exception(
+                            'model',
+                            "Field $key is not fillable in entity " . get_called_class() . "."
+                        );
+                    }
+                }
+            }
+        } else {
+            foreach ($this->guarded as $key) {
+                if (in_array($key, $keys)) {
+                    Core::exception(
+                        'model',
+                        "Field $key is guarded in entity " . get_called_class() . "."
+                    );
+                }
+            }
+        }
+
+        return new static($this->item->save($callback)->toArray());
     }
 
     public function __call(string $name, array $arguments)

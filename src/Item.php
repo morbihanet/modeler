@@ -335,7 +335,7 @@ class Item extends Record
     public function modeler(): Modeler
     {
         /** @var Modeler $modeler */
-        $modeler = app()->make(Core::get('modeler'));
+        $modeler = app()->make($this->getDb()->getModeler());
 
         return $modeler;
     }

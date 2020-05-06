@@ -6,120 +6,121 @@ use Illuminate\Support\Arr;
 use Faker\Generator as Faker;
 
 /**
- * @method static Item|Iterator findOrFail($id)
- * @method static Item|Iterator find($id, $default = null)
- * @method static Item make(array $attributes = [])
- * @method static Item firstOrNew(array $attributes, $values = [])
- * @method static Item firstOrCreate(array $attributes, $values = [])
- * @method static Item findOrNew($id, array $columns = [])
- * @method static Item updateOrCreate($attributes, array $values = [])
- * @method static Iterator notIn(string $column, array $values)
- * @method static Iterator in(string $column, array $values)
- * @method static Iterator orNotIn(string $column, array $values)
- * @method static Iterator orIn(string $column, array $values)
- * @method static Iterator whereIn(string $column, array $values)
- * @method static Iterator orWhereIn(string $column, array $values)
- * @method static Iterator whereNotIn(string $column, array $values, string $boolean = 'and')
- * @method static Iterator orWhereNotIn(string $column, array $values)
- * @method static Iterator orderBy(string $column, $direction = 'asc')
- * @method static Iterator orderByDesc(string $column)
- * @method static Iterator skip(int $value)
- * @method static Iterator offset(int $value)
- * @method static Iterator take(int $value)
- * @method static Iterator limit(int $value)
- * @method static Iterator forPage(int $page, int $perPage = 15)
- * @method static Item|mixed firstOr(array $columns = [], $callback = null)
- * @method static Iterator get(array $columns = [])
- * @method static Iterator pluck(string $column, ?string $key = null)
- * @method static Iterator cursor()
- * @method static Iterator morphToMany(string $class, string $morphName, ?Item $record = null)
- * @method static Iterator morphToOne(string $class, string $morphName, ?Item $record = null)
- * @method static Iterator morphTo(?string $morphName = null, ?Item $record = null)
- * @method static Iterator has(string $relation, ?string $fk = null)
- * @method static Iterator doesntHave(string $relation, ?string $fk = null)
- * @method static int destroy()
- * @method static Iterator groupBy(string $groupBy, bool $preserveKeys = false)
- * @method static Iterator where(string $column, ?string $operator = null, $value = null, string $boolean = 'and')
- * @method static Iterator like(string $column, string $value)
- * @method static Iterator orLike(string $column, string $value)
- * @method static Iterator notLike(string $column, string $value)
- * @method static Iterator orNotLike(string $column, string $value)
- * @method static Iterator likeI(string $column, string $value)
- * @method static Iterator orLikeI(string $column, string $value)
- * @method static Iterator notLikeI(string $column, string $value)
- * @method static Iterator orNotLikeI(string $column, string $value)
- * @method static bool contains(Item $item)
- * @method static bool notContains(Item $item)
- * @method static Iterator sortBy(string $column)
- * @method static Iterator search(array $conditions)
- * @method static Iterator sortByDesc(string $column)
- * @method static Iterator orWhere(string $column, ?string $operator = null, $value = null)
- * @method static Iterator latest(?string $column = null)
- * @method static Iterator oldest(?string $column = null)
- * @method static Iterator between(string $column, int $min, int $max)
- * @method static Iterator orBetween(string $column, int $min, int $max)
- * @method static Iterator isNull(string $column)
- * @method static Iterator orIsNull(string $column)
- * @method static Iterator isNotNull(string $column)
- * @method static Iterator orIsNotNull(string $column)
- * @method static Iterator startsWith(string $column, $value)
- * @method static Iterator orStartsWith(string $column, $value)
- * @method static Iterator endsWith(string $column, $value)
- * @method static Iterator orEndsWith(string $column, $value)
- * @method static Iterator notStartsWith(string $column, $value)
- * @method static Iterator orNotStartsWith(string $column, $value)
- * @method static Iterator notEndsWith(string $column, $value)
- * @method static Iterator orNotEndsWith(string $column, $value)
- * @method static Iterator lt(string $column, $value)
- * @method static Iterator orLt(string $column, $value)
- * @method static Iterator lte(string $column, $value)
- * @method static Iterator orLte(string $column, $value)
- * @method static Iterator gt(string $column, $value)
- * @method static Iterator orGt(string $column, $value)
- * @method static Iterator gte(string $column, $value)
- * @method static Iterator orGte(string $column, $value)
- * @method static Iterator before($date, bool $strict = true)
- * @method static Iterator orBefore($date, bool $strict = true)
- * @method static Iterator after($date, bool $strict = true)
- * @method static Iterator orAfter($date, bool $strict = true)
- * @method static Iterator when(string $field, $operator, $date)
- * @method static Iterator orWhen(string $field, $operator, $date)
- * @method static Iterator deleted()
- * @method static Iterator orDeleted()
- * @method static Iterator getEngine()
- * @method static int count($columns = '*')
- * @method static int sync(Item $item, array $arguments = '*')
- * @method static int attach(Item $item, array $arguments = '*')
- * @method static int detach(Item $item)
- * @method static Item|null first($columns = [])
- * @method static Item|null firstBy(string $field, $value)
- * @method static Item|null lastBy(string $field, $value)
- * @method static Item|null findBy(string $field, $value = null)
- * @method static bool updateOrInsert(array $attributes, array $values = [])
- * @method static bool insert($values)
- * @method static bool exists()
- * @method static bool notExists()
- * @method static mixed min(string $column)
- * @method static mixed max(string $column)
- * @method static mixed sum(string $column)
- * @method static mixed avg(string $column)
- * @method static mixed|null fire(string $event, $concern = null, bool $return = false)
- * @method static Item create(array $attributes = [])
- * @method static Modeler setCache(bool $cache = true)
- * @method static Modeler setEngine(Iterator $engine)
- * @method static Modeler select(...$fields)
- * @method static string implode($value, ?string $glue = null)
- * @method static Iterator chunk(int $size)
- * @method static FileStore|Store|null|bool beginTransaction()
- * @method static FileStore|Store|MemoryStore|RedisStore newQuery()
- * @method static bool commit()
- * @method static bool rollback()
- * @method static string toJson()
- * @method static Iterator all()
- * @method static void proxy(string $method)
- * @method static mixed transaction(\Closure $callback, int $attempts = 1)
- * @method static array morphedByMany(string $morphClass, string $morphName)
- * @method static Item|null morphed(string $morphClass, string $morphName)
+ * @method Item|Iterator findOrFail($id)
+ * @method Item|Iterator find($id, $default = null)
+ * @method Item make(array $attributes = [])
+ * @method Item firstOrNew(array $attributes, $values = [])
+ * @method Item firstOrCreate(array $attributes, $values = [])
+ * @method Item findOrNew($id, array $columns = [])
+ * @method Item updateOrCreate($attributes, array $values = [])
+ * @method Iterator notIn(string $column, array $values)
+ * @method Iterator in(string $column, array $values)
+ * @method Iterator orNotIn(string $column, array $values)
+ * @method Iterator orIn(string $column, array $values)
+ * @method Iterator whereIn(string $column, array $values)
+ * @method Iterator orWhereIn(string $column, array $values)
+ * @method Iterator whereNotIn(string $column, array $values, string $boolean = 'and')
+ * @method Iterator orWhereNotIn(string $column, array $values)
+ * @method Iterator orderBy(string $column, $direction = 'asc')
+ * @method Iterator orderByDesc(string $column)
+ * @method Iterator skip(int $value)
+ * @method Iterator offset(int $value)
+ * @method Iterator take(int $value)
+ * @method Iterator limit(int $value)
+ * @method Iterator forPage(int $page, int $perPage = 15)
+ * @method Item|mixed firstOr(array $columns = [], $callback = null)
+ * @method Iterator get(array $columns = [])
+ * @method Iterator pluck(string $column, ?string $key = null)
+ * @method Iterator cursor()
+ * @method Iterator morphToMany(string $class, string $morphName, ?Item $record = null)
+ * @method Iterator morphToOne(string $class, string $morphName, ?Item $record = null)
+ * @method Iterator morphTo(?string $morphName = null, ?Item $record = null)
+ * @method Iterator has(string $relation, ?string $fk = null)
+ * @method Iterator doesntHave(string $relation, ?string $fk = null)
+ * @method int destroy()
+ * @method Iterator groupBy(string $groupBy, bool $preserveKeys = false)
+ * @method Iterator where(string $column, ?string $operator = null, $value = null, string $boolean = 'and')
+ * @method Iterator like(string $column, string $value)
+ * @method Iterator orLike(string $column, string $value)
+ * @method Iterator notLike(string $column, string $value)
+ * @method Iterator orNotLike(string $column, string $value)
+ * @method Iterator likeI(string $column, string $value)
+ * @method Iterator orLikeI(string $column, string $value)
+ * @method Iterator notLikeI(string $column, string $value)
+ * @method Iterator orNotLikeI(string $column, string $value)
+ * @method bool contains(Item $item)
+ * @method bool notContains(Item $item)
+ * @method Iterator sortBy(string $column)
+ * @method Iterator search(array $conditions)
+ * @method Iterator sortByDesc(string $column)
+ * @method Iterator orWhere(string $column, ?string $operator = null, $value = null)
+ * @method Iterator latest(?string $column = null)
+ * @method Iterator oldest(?string $column = null)
+ * @method Iterator between(string $column, int $min, int $max)
+ * @method Iterator orBetween(string $column, int $min, int $max)
+ * @method Iterator isNull(string $column)
+ * @method Iterator orIsNull(string $column)
+ * @method Iterator isNotNull(string $column)
+ * @method Iterator orIsNotNull(string $column)
+ * @method Iterator startsWith(string $column, $value)
+ * @method Iterator orStartsWith(string $column, $value)
+ * @method Iterator endsWith(string $column, $value)
+ * @method Iterator orEndsWith(string $column, $value)
+ * @method Iterator notStartsWith(string $column, $value)
+ * @method Iterator orNotStartsWith(string $column, $value)
+ * @method Iterator notEndsWith(string $column, $value)
+ * @method Iterator orNotEndsWith(string $column, $value)
+ * @method Iterator lt(string $column, $value)
+ * @method Iterator orLt(string $column, $value)
+ * @method Iterator lte(string $column, $value)
+ * @method Iterator orLte(string $column, $value)
+ * @method Iterator gt(string $column, $value)
+ * @method Iterator orGt(string $column, $value)
+ * @method Iterator gte(string $column, $value)
+ * @method Iterator orGte(string $column, $value)
+ * @method Iterator before($date, bool $strict = true)
+ * @method Iterator orBefore($date, bool $strict = true)
+ * @method Iterator after($date, bool $strict = true)
+ * @method Iterator orAfter($date, bool $strict = true)
+ * @method Iterator when(string $field, $operator, $date)
+ * @method Iterator orWhen(string $field, $operator, $date)
+ * @method Iterator deleted()
+ * @method Iterator orDeleted()
+ * @method Iterator getEngine()
+ * @method int count($columns = '*')
+ * @method int sync(Item $item, array $arguments = '*')
+ * @method int attach(Item $item, array $arguments = '*')
+ * @method int detach(Item $item)
+ * @method Item|null first($columns = [])
+ * @method Item|null firstBy(string $field, $value)
+ * @method Item|null lastBy(string $field, $value)
+ * @method Item|null findBy(string $field, $value = null)
+ * @method bool updateOrInsert(array $attributes, array $values = [])
+ * @method bool insert($values)
+ * @method bool exists()
+ * @method bool notExists()
+ * @method mixed min(string $column)
+ * @method mixed max(string $column)
+ * @method mixed sum(string $column)
+ * @method mixed avg(string $column)
+ * @method mixed|null fire(string $event, $concern = null, bool $return = false)
+ * @method Item create(array $attributes = [])
+ * @method Modeler setCache(bool $cache = true)
+ * @method Modeler setEngine(Iterator $engine)
+ * @method Modeler select(...$fields)
+ * @method string implode($value, ?string $glue = null)
+ * @method Iterator chunk(int $size)
+ * @method FileStore|Store|null|bool beginTransaction()
+ * @method FileStore|Store|MemoryStore|RedisStore newQuery()
+ * @method bool commit()
+ * @method bool rollback()
+ * @method string toJson()
+ * @method Iterator all()
+ * @method void proxy(string $method)
+ * @method mixed transaction(\Closure $callback, int $attempts = 1)
+ * @method array morphedByMany(string $morphClass, string $morphName)
+ * @method Item|null morphed(string $morphClass, string $morphName)
+ * @method array pluckWhere(string $key, $value, string $pluckValue = 'id', ?string $pluckKey = null)
  * @property-read Proxy $average
  * @property-read Proxy $avg
  * @property-read Proxy $contains
@@ -156,7 +157,7 @@ class Modeler
     {
         Core::set('modeler', $class = get_called_class());
 
-        $hasBooted = isset(static::$booted[get_called_class()]);
+        $hasBooted = isset(static::$booted[$class]);
 
         if (!$hasBooted) {
             static::boot();
@@ -180,6 +181,14 @@ class Modeler
         //
     }
 
+    /**
+     * @param string $connection
+     */
+    public static function connection(string $connection): void
+    {
+        self::$connection = $connection;
+    }
+
     public function __get(string $key)
     {
         if ($item = Core::get('item_record')) {
@@ -192,9 +201,8 @@ class Modeler
     public static function __callStatic(string $name, array $arguments)
     {
         Core::set('modeler', $class = get_called_class());
-        $model = static::getModelName($class);
 
-        return static::factorModel($model)->{$name}(...$arguments);
+        return static::factorModel(static::getModelName($class))->{$name}(...$arguments);
     }
 
     public function __call(string $name, array $arguments)
@@ -360,25 +368,23 @@ class Modeler
 
         $class = $namespace . '\\' . $model;
 
-        if (class_exists($class)) {
-            return new $class;
+        if (!class_exists($class)) {
+            $code = 'namespace ' . $namespace . ';';
+
+            if (static::$store === Store::class) {
+                $code .= 'class ' . $model . ' extends \\Morbihanet\\Modeler\\Store {}';
+            } else if (static::$store === RedisStore::class) {
+                $code .= 'class ' . $model . ' extends \\Morbihanet\\Modeler\\RedisStore {}';
+            } else if (static::$store === MemoryStore::class) {
+                $code .= 'class ' . $model . ' extends \\Morbihanet\\Modeler\\MemoryStore {}';
+            } else if (static::$store === FileStore::class) {
+                $code .= 'class ' . $model . ' extends \\Morbihanet\\Modeler\\FileStore {}';
+            } else if (static::$store === LiteStore::class) {
+                $code .= 'class ' . $model . ' extends \\Morbihanet\\Modeler\\LiteStore {}';
+            }
+
+            eval($code);
         }
-
-        $code = 'namespace ' . $namespace . ';';
-
-        if (static::$store === Store::class) {
-            $code .= 'class ' . $model . ' extends \\Morbihanet\\Modeler\\Store {}';
-        } else if (static::$store === RedisStore::class) {
-            $code .= 'class ' . $model . ' extends \\Morbihanet\\Modeler\\RedisStore {}';
-        } else if (static::$store === MemoryStore::class) {
-            $code .= 'class ' . $model . ' extends \\Morbihanet\\Modeler\\MemoryStore {}';
-        } else if (static::$store === FileStore::class) {
-            $code .= 'class ' . $model . ' extends \\Morbihanet\\Modeler\\FileStore {}';
-        } else if (static::$store === LiteStore::class) {
-            $code .= 'class ' . $model . ' extends \\Morbihanet\\Modeler\\LiteStore {}';
-        }
-
-        eval($code);
 
         return new $class;
     }

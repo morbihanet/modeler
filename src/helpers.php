@@ -7,11 +7,48 @@ use Morbihanet\Modeler\Store;
 use Morbihanet\Modeler\Model;
 use Morbihanet\Modeler\Valued;
 use Morbihanet\Modeler\Modeler;
+use Morbihanet\Modeler\Accessor;
 use Morbihanet\Modeler\FileStore;
 use Morbihanet\Modeler\LiteStore;
 use Morbihanet\Modeler\RedisStore;
 use Morbihanet\Modeler\MemoryStore;
 use Illuminate\Support\Facades\Route;
+
+if (!function_exists('resolver')) {
+    function resolver(string $name, $resolver = null): Accessor
+    {
+        $namespace = 'App\\Resolvers';
+
+        $name = ucfirst(Str::camel(str_replace('.', '\\_', $name)));
+
+        $class = $namespace . '\\' . $name;
+
+        if (!class_exists($class)) {
+            $code = 'namespace ' . $namespace . '; class ' . $name . ' extends \\Morbihanet\\Modeler\\Accessor {}';
+
+            eval($code);
+        }
+
+        if (null !== $resolver) {
+            $class::resolver($resolver);
+        }
+
+        return new $class;
+    }
+}
+
+if (!function_exists('make_with')) {
+    function make_with(string $class, ...$params)
+    {
+        static $made = [];
+
+        if (!isset($made[$class])) {
+            $made[$class] = app()->make($class, $params);
+        }
+
+        return $made[$class];
+    }
+}
 
 if (!function_exists('model_generator')) {
     function model_generator(string $model, array $attributes, string $namespace, string $store): Model
@@ -20,25 +57,24 @@ if (!function_exists('model_generator')) {
 
         $class = $namespace . '\\' . $model;
 
-        if (class_exists($class)) {
-            return new $class($attributes);
+        if (!class_exists($class)) {
+
+            $code = 'namespace ' . $namespace . '; class ' . $model . ' extends \\Morbihanet\\Modeler\\Model {';
+
+            if ($store === Store::class) {
+                $code .= 'protected static string $store = \\Morbihanet\\Modeler\\Store::class;}';
+            } else if ($store === RedisStore::class) {
+                $code .= 'protected static string $store = \\Morbihanet\\Modeler\\RedisStore::class;}';
+            } else if ($store === MemoryStore::class) {
+                $code .= 'protected static string $store = \\Morbihanet\\Modeler\\MemoryStore::class;}';
+            } else if ($store === FileStore::class) {
+                $code .= 'protected static string $store = \\Morbihanet\\Modeler\\FileStore::class;}';
+            } else if ($store === LiteStore::class) {
+                $code .= 'protected static string $store = \\Morbihanet\\Modeler\\LiteStore::class;}';
+            }
+
+            eval($code);
         }
-
-        $code = 'namespace ' . $namespace . '; class ' . $model . ' extends \\Morbihanet\\Modeler\\Model {';
-
-        if ($store === Store::class) {
-            $code .= 'protected static string $store = \\Morbihanet\\Modeler\\Store::class;}';
-        } else if ($store === RedisStore::class) {
-            $code .= 'protected static string $store = \\Morbihanet\\Modeler\\RedisStore::class;}';
-        } else if ($store === MemoryStore::class) {
-            $code .= 'protected static string $store = \\Morbihanet\\Modeler\\MemoryStore::class;}';
-        } else if ($store === FileStore::class) {
-            $code .= 'protected static string $store = \\Morbihanet\\Modeler\\FileStore::class;}';
-        } else if ($store === LiteStore::class) {
-            $code .= 'protected static string $store = \\Morbihanet\\Modeler\\LiteStore::class;}';
-        }
-
-        eval($code);
 
         return new $class($attributes);
     }
@@ -51,25 +87,24 @@ if (!function_exists('db_generator')) {
 
         $class = $namespace . '\\' . $model;
 
-        if (class_exists($class)) {
-            return new $class;
+        if (!class_exists($class)) {
+
+            $code = 'namespace ' . $namespace . '; class ' . $model . ' extends \\Morbihanet\\Modeler\\Modeler {';
+
+            if ($store === Store::class) {
+                $code .= 'protected static string $store = \\Morbihanet\\Modeler\\Store::class;}';
+            } else if ($store === RedisStore::class) {
+                $code .= 'protected static string $store = \\Morbihanet\\Modeler\\RedisStore::class;}';
+            } else if ($store === MemoryStore::class) {
+                $code .= 'protected static string $store = \\Morbihanet\\Modeler\\MemoryStore::class;}';
+            } else if ($store === FileStore::class) {
+                $code .= 'protected static string $store = \\Morbihanet\\Modeler\\FileStore::class;}';
+            } else if ($store === LiteStore::class) {
+                $code .= 'protected static string $store = \\Morbihanet\\Modeler\\LiteStore::class;}';
+            }
+
+            eval($code);
         }
-
-        $code = 'namespace ' . $namespace . '; class ' . $model . ' extends \\Morbihanet\\Modeler\\Modeler {';
-
-        if ($store === Store::class) {
-            $code .= 'protected static string $store = \\Morbihanet\\Modeler\\Store::class;}';
-        } else if ($store === RedisStore::class) {
-            $code .= 'protected static string $store = \\Morbihanet\\Modeler\\RedisStore::class;}';
-        } else if ($store === MemoryStore::class) {
-            $code .= 'protected static string $store = \\Morbihanet\\Modeler\\MemoryStore::class;}';
-        } else if ($store === FileStore::class) {
-            $code .= 'protected static string $store = \\Morbihanet\\Modeler\\FileStore::class;}';
-        } else if ($store === LiteStore::class) {
-            $code .= 'protected static string $store = \\Morbihanet\\Modeler\\LiteStore::class;}';
-        }
-
-        eval($code);
 
         return new $class;
     }
@@ -183,13 +218,11 @@ if (!function_exists('valued')) {
 
         $class = $namespace . '\\' . $model;
 
-        if (class_exists($class)) {
-            return new $class;
+        if (!class_exists($class)) {
+            $code = 'namespace ' . $namespace . '; class ' . $model . ' extends \\Morbihanet\\Modeler\\Valued {}';
+
+            eval($code);
         }
-
-        $code = 'namespace ' . $namespace . '; class ' . $model . ' extends \\Morbihanet\\Modeler\\Valued {}';
-
-        eval($code);
 
         return new $class;
     }
@@ -205,25 +238,23 @@ if (!function_exists('modeler')) {
 
         $class = $namespace . '\\' . $model;
 
-        if (class_exists($class)) {
-            return new $class;
+        if (!class_exists($class)) {
+            $code = 'namespace ' . $namespace . ';';
+
+            if ($store === Store::class) {
+                $code .= 'class ' . $model . ' extends \\Morbihanet\\Modeler\\Store {}';
+            } else if ($store === RedisStore::class) {
+                $code .= 'class ' . $model . ' extends \\Morbihanet\\Modeler\\RedisStore {}';
+            } else if ($store === MemoryStore::class) {
+                $code .= 'class ' . $model . ' extends \\Morbihanet\\Modeler\\MemoryStore {}';
+            } else if ($store === FileStore::class) {
+                $code .= 'class ' . $model . ' extends \\Morbihanet\\Modeler\\FileStore {}';
+            } else if ($store === LiteStore::class) {
+                $code .= 'class ' . $model . ' extends \\Morbihanet\\Modeler\\LiteStore {}';
+            }
+
+            eval($code);
         }
-
-        $code = 'namespace ' . $namespace . ';';
-
-        if ($store === Store::class) {
-            $code .= 'class ' . $model . ' extends \\Morbihanet\\Modeler\\Store {}';
-        } else if ($store === RedisStore::class) {
-            $code .= 'class ' . $model . ' extends \\Morbihanet\\Modeler\\RedisStore {}';
-        } else if ($store === MemoryStore::class) {
-            $code .= 'class ' . $model . ' extends \\Morbihanet\\Modeler\\MemoryStore {}';
-        } else if ($store === FileStore::class) {
-            $code .= 'class ' . $model . ' extends \\Morbihanet\\Modeler\\FileStore {}';
-        } else if ($store === LiteStore::class) {
-            $code .= 'class ' . $model . ' extends \\Morbihanet\\Modeler\\LiteStore {}';
-        }
-
-        eval($code);
 
         return new $class;
     }
@@ -295,18 +326,16 @@ if (!function_exists('modeler')) {
 
             $class = $namespace . '\\' . $model;
 
-            if (class_exists($class)) {
-                return new $class($item);
-            }
-
-            $code = 'namespace ' . $namespace . '; class ' . $model . ' extends \\Illuminate\\Http\\Resources\\Json\\JsonResource {
+            if (!class_exists($class)) {
+                $code = 'namespace ' . $namespace . '; class ' . $model . ' extends \\Illuminate\\Http\\Resources\\Json\\JsonResource {
             public function __toString()
             {
                 return $this->resource->toJson();
             }
             }';
 
-            eval($code);
+                eval($code);
+            }
 
             return new $class($item);
         }

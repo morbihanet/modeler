@@ -2,6 +2,7 @@
 
 namespace Morbihanet\Modeler\Test;
 
+use Morbihanet\Modeler\Core;
 use Morbihanet\Modeler\Redis;
 use Morbihanet\Modeler\FileStore;
 use Morbihanet\Modeler\MemoryStore;
@@ -14,6 +15,9 @@ abstract class TestCase extends Orchestra
     public function setUp(): void
     {
         parent::setUp();
+
+        Core::app($this->app);
+
         $this->setUpDatabase();
 
         $this->app['config']->set('database.redis.client', 'predis');
@@ -53,7 +57,7 @@ abstract class TestCase extends Orchestra
      *
      * @return array
      */
-    protected function getPackageProviders($app)
+    protected function getPackageProviders($app): array
     {
         return [];
     }
@@ -61,7 +65,7 @@ abstract class TestCase extends Orchestra
     /**
      * @param \Illuminate\Foundation\Application $app
      */
-    protected function getEnvironmentSetUp($app)
+    protected function getEnvironmentSetUp($app): void
     {
         $app['config']->set('database.default', 'sqlite');
 
@@ -79,7 +83,7 @@ abstract class TestCase extends Orchestra
         ]);
     }
 
-    protected function setUpDatabase()
+    protected function setUpDatabase(): void
     {
         $this->app['db']->connection()->getSchemaBuilder()->create('kv', function (Blueprint $table) {
             $table->string('k')->primary()->unique();
