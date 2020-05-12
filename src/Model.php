@@ -12,6 +12,7 @@ class Model extends Modeler implements ArrayAccess
     public function __construct(array $attributes = [])
     {
         parent::__construct();
+
         $this->item = static::getDb()->model($attributes);
     }
 

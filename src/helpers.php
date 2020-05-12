@@ -7,11 +7,13 @@ use Morbihanet\Modeler\Store;
 use Morbihanet\Modeler\Model;
 use Morbihanet\Modeler\Valued;
 use Morbihanet\Modeler\Modeler;
+use Morbihanet\Modeler\Context;
 use Morbihanet\Modeler\Accessor;
 use Morbihanet\Modeler\FileStore;
 use Morbihanet\Modeler\LiteStore;
 use Morbihanet\Modeler\RedisStore;
 use Morbihanet\Modeler\MemoryStore;
+use Morbihanet\Modeler\Data\Session;
 use Illuminate\Support\Facades\Route;
 
 if (!function_exists('resolver')) {
@@ -58,7 +60,6 @@ if (!function_exists('model_generator')) {
         $class = $namespace . '\\' . $model;
 
         if (!class_exists($class)) {
-
             $code = 'namespace ' . $namespace . '; class ' . $model . ' extends \\Morbihanet\\Modeler\\Model {';
 
             if ($store === Store::class) {
@@ -88,7 +89,6 @@ if (!function_exists('db_generator')) {
         $class = $namespace . '\\' . $model;
 
         if (!class_exists($class)) {
-
             $code = 'namespace ' . $namespace . '; class ' . $model . ' extends \\Morbihanet\\Modeler\\Modeler {';
 
             if ($store === Store::class) {
@@ -107,6 +107,70 @@ if (!function_exists('db_generator')) {
         }
 
         return new $class;
+    }
+}
+
+if (!function_exists('context')) {
+    function context(string $context = 'core', array $attributes = []): Context
+    {
+        return Context::getInstance($context, $attributes);
+    }
+}
+
+if (!function_exists('redis_session')) {
+    function redis_session(string $namespace = 'web')
+    {
+        $data = redis_data('session_' . $namespace);
+
+        return new Session($data);
+    }
+}
+
+if (!function_exists('redis_data')) {
+    function redis_data(string $model, array $attributes = []): \Morbihanet\Modeler\Data\Redis
+    {
+        $namespace = config('modeler.data_class', '\\App\\Data') . '\\Redis';
+
+        $model = ucfirst(Str::camel(str_replace('.', '\\_', $model)));
+
+        $class = $namespace . '\\' . $model;
+
+        if (!class_exists($class)) {
+            $code = 'namespace ' . $namespace . '; class ' . $model . ' extends \\Morbihanet\\Modeler\\Data\\Redis {}';
+
+            eval($code);
+        }
+
+        return new $class($attributes);
+    }
+}
+
+if (!function_exists('datum')) {
+    function datum(
+        string $model,
+        ?string $database = null,
+        array $attributes = [],
+        ?string $namespace = null,
+        bool $authenticable = false
+    ): Model {
+        if ($database) {
+            $model = $database . '_' . $model;
+        }
+
+        $namespace = $namespace ?? config('modeler.datum_class');
+
+        $model = ucfirst(Str::camel(str_replace('.', '\\_', $model)));
+
+        $class = $namespace . '\\' . $model;
+
+        if (!class_exists($class)) {
+            $code = 'namespace ' . $namespace . '; class ' . $model . ' extends \\Morbihanet\\Modeler\\Model {';
+            $code .= 'protected static string $store = \\Morbihanet\\Modeler\\Store::class;}';
+
+            eval($code);
+        }
+
+        return (new $class($attributes))->setAuthenticable($authenticable);
     }
 }
 
@@ -212,7 +276,7 @@ if (!function_exists('lite_store')) {
 }
 
 if (!function_exists('valued')) {
-    function valued(string $model, string $namespace = 'Valued\\Models'): Valued
+    function valued(string $model, string $namespace = 'App\\Valued\\Models'): Valued
     {
         $model = ucfirst(Str::camel(str_replace('.', '\\_', $model)));
 

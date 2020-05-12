@@ -1,15 +1,22 @@
 <?php
-namespace Morbihanet\Modeler;
+namespace Morbihanet\Modeler\Data;
 
+use Countable;
 use Traversable;
+use ArrayAccess;
+use IteratorAggregate;
 use Illuminate\Support\Str;
 use Illuminate\Support\Arr;
+use Morbihanet\Modeler\Core;
 use Illuminate\Session\Store;
+use Morbihanet\Modeler\Iterator;
+use Morbihanet\Modeler\MiddlewareCsrf;
+use Morbihanet\Modeler\NullSessionHandler;
 
 class Session extends Store implements
-    \ArrayAccess,
-    \Countable,
-    \IteratorAggregate {
+    ArrayAccess,
+    Countable,
+    IteratorAggregate {
     /** @var string */
     protected $namespace;
 
@@ -23,19 +30,18 @@ class Session extends Store implements
     protected $localeKey = '_locale';
 
     protected $onces = null;
+    protected $store = [];
 
     protected static array $instances = [];
 
-    /**
-     * @param string $namespace
-     * @param string $userKey
-     * @param string|null $userModel
-     */
     public function __construct(
+        &$store,
         string $namespace = 'web',
         string $userKey = 'user',
         ?string $userModel = null
     ) {
+        $this->store = &$store;
+
         if (null === $userModel) {
             $userModel = config('modeler.user_model');
         }
@@ -46,12 +52,13 @@ class Session extends Store implements
     }
 
     public static function getInstance(
+        &$store,
         string $namespace = 'web',
         string $userKey = 'user',
         ?string $userModel = null
     ): self {
         if (!array_key_exists($namespace, static::$instances)) {
-            return static::$instances[$namespace] = new static($namespace, $userKey, $userModel);
+            return static::$instances[$namespace] = new static($store, $namespace, $userKey, $userModel);
         }
 
         return static::$instances[$namespace];
@@ -88,7 +95,7 @@ class Session extends Store implements
     public function get($key, $default = null)
     {
         if ($this->has($key)) {
-            $value = $_SESSION[$this->makeKey($key)];
+            $value = $this->store[$this->makeKey($key)];
 
             if (!fnmatch('_flash.*', $key) && in_array($key, $flashes = $this->get('_flash.new', []))) {
                 foreach ($flashes as $ind => $flash) {
@@ -115,8 +122,8 @@ class Session extends Store implements
     public function set(string $key, $value): self
     {
         $this->check();
-        $_SESSION[$index = $this->makeKey($key)] = $value;
-        $_SESSION[$index . '._at'] = time();
+        $this->store[$index = $this->makeKey($key)] = $value;
+        $this->store[$index . '._at'] = time();
 
         return $this;
     }
@@ -130,7 +137,7 @@ class Session extends Store implements
         if ($this->has($key)) {
             $index = $this->makeKey($key);
 
-            return (int) $_SESSION[$index . '._at'];
+            return (int) $this->store[$index . '._at'];
         }
 
         return 0;
@@ -144,7 +151,7 @@ class Session extends Store implements
     {
         $this->check();
 
-        return Core::notSame('octodummy', Arr::get($_SESSION, $this->makeKey($key), 'octodummy'));
+        return Core::notSame('octodummy', Arr::get($this->store, $this->makeKey($key), 'octodummy'));
     }
 
     /**
@@ -154,7 +161,7 @@ class Session extends Store implements
     public function delete(string $key): bool
     {
         $status = $this->has($key);
-        unset($_SESSION[$this->makeKey($key)]);
+        unset($this->store[$this->makeKey($key)]);
 
         return $status;
     }
@@ -201,7 +208,7 @@ class Session extends Store implements
     {
         $this->check();
 
-        return count(Core::pattern($_SESSION, $this->namespace . '.*'));
+        return count(Core::pattern($this->store, $this->namespace . '.*'));
     }
 
     /**
@@ -242,16 +249,11 @@ class Session extends Store implements
         return session_id();
     }
 
-    /**
-     * @return bool
-     */
     public function regenerate($destroy = false)
     {
         if (true === $destroy) {
             $this->destroy();
         }
-
-        return session_regenerate_id();
     }
 
     /**
@@ -526,7 +528,7 @@ class Session extends Store implements
     {
         $this->check();
 
-        $keys = Core::pattern($_SESSION, $this->namespace . '.*');
+        $keys = Core::pattern($this->store, $this->namespace . '.*');
 
         $collection = [];
 
@@ -551,8 +553,8 @@ class Session extends Store implements
 
         $this->check();
 
-        foreach (Core::pattern($_SESSION, $this->namespace . '.*') as $key => $value) {
-            unset($_SESSION[$key]);
+        foreach (Core::pattern($this->store, $this->namespace . '.*') as $key => $value) {
+            unset($this->store[$key]);
         }
 
         return 0 === $this->toCollection()->count();
@@ -816,9 +818,6 @@ class Session extends Store implements
 
     protected function check(): void
     {
-        if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
-            session_start();
-        }
     }
 
     /**
@@ -826,7 +825,7 @@ class Session extends Store implements
      */
     public function alive()
     {
-        return session_status() === PHP_SESSION_ACTIVE;
+        return is_object($this->store) && in_array('offsetGet', get_class_methods($this->store));
     }
 
     /**
@@ -859,7 +858,7 @@ class Session extends Store implements
      */
     public function __clone()
     {
-        return (new static($this->namespace . '.clone'))->fill($this->all());
+        return (new static($this->store, $this->namespace . '.clone'))->fill($this->all());
     }
 
     /**
@@ -880,7 +879,7 @@ class Session extends Store implements
     public function getOr(string $key, callable $c)
     {
         if (!$this->has($key)) {
-            $value = callThat($c);
+            $value = value($c);
 
             $this->set($key, $value);
 

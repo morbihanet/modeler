@@ -5,6 +5,8 @@ use Morbihanet\Modeler\Store;
 
 
 return [
+    'data_class' => 'App\\Data',
+    'datum_class' => 'App\\Datum\\Models',
     'model_class' => 'App\\Repositories',
     'item_class' => 'App\\Entities',
     'cache_ttl' => 24 * 3600,

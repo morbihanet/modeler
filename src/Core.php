@@ -10,9 +10,11 @@ use ReflectionFunction;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use Illuminate\Support\Carbon;
+use Faker\Provider\fr_FR\Company;
 use Illuminate\Container\Container;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Route;
+use Faker\Provider\fr_FR\PhoneNumber;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Client\Factory as Http;
 use Illuminate\Support\Facades\DB as DbMaster;
@@ -20,8 +22,8 @@ use Illuminate\Validation\Factory as ValidatorFactory;
 
 class Core
 {
-    /** @var array */
-    protected static $data = [];
+    protected static array $data = [];
+    protected static ?Generator $faker;
 
     /** @var string */
     const EMAIL_REGEX_LOCAL = '(?!(?:(?:\\x22?\\x5C[\\x00-\\x7E]\\x22?)|(?:\\x22?[^\\x5C\\x22]\\x22?)){255,})(?!(?:(?:\\x22?\\x5C[\\x00-\\x7E]\\x22?)|(?:\\x22?[^\\x5C\\x22]\\x22?)){65,}@)(?:(?:[\\x21\\x23-\\x27\\x2A\\x2B\\x2D\\x2F-\\x39\\x3D\\x3F\\x5E-\\x7E]+)|(?:\\x22(?:[\\x01-\\x08\\x0B\\x0C\\x0E-\\x1F\\x21\\x23-\\x5B\\x5D-\\x7F]|(?:\\x5C[\\x00-\\x7F]))*\\x22))(?:\\.(?:(?:[\\x21\\x23-\\x27\\x2A\\x2B\\x2D\\x2F-\\x39\\x3D\\x3F\\x5E-\\x7E]+)|(?:\\x22(?:[\\x01-\\x08\\x0B\\x0C\\x0E-\\x1F\\x21\\x23-\\x5B\\x5D-\\x7F]|(?:\\x5C[\\x00-\\x7F]))*\\x22)))*';
@@ -65,6 +67,31 @@ class Core
         static::$data[$key] = $value;
 
         return new static;
+    }
+
+    /**
+     * @param string $key
+     * @param $value
+     * @return static
+     */
+    public static function setNx(string $key, $value): self
+    {
+        if (!static::has($key)) {
+            static::$data[$key] = $value;
+        }
+
+        return new static;
+    }
+
+    public static function faker(string $locale = 'fr_FR'): Generator
+    {
+        if (static::$faker === null) {
+            static::$faker = Factory::create($locale);
+            static::$faker->addProvider(new Company(static::$faker));
+            static::$faker->addProvider(new PhoneNumber(static::$faker));
+        }
+
+        return static::$faker;
     }
 
     /**
@@ -437,7 +464,7 @@ class Core
      * @param string $lng
      * @return Generator
      */
-    public static function faker(string $lng = 'fr_FR'): Generator
+    public static function fakerFactory(string $lng = 'fr_FR'): Generator
     {
         return Factory::create(config('faker.language', $lng));
     }
@@ -459,13 +486,13 @@ class Core
         DbMaster::beginTransaction();
 
         try {
-            Context::merge([
+            context('transaction')->merge([
                 'transaction_uuid' => $uuid,
             ]);
 
             value($transaction);
         } catch (QueryException $e) {
-            Context::merge([
+            context('transaction')->merge([
                 'transaction_uuid' => $uuid,
                 'exception_message' => $e->getMessage(),
             ]);

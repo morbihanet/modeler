@@ -6,7 +6,7 @@ use Illuminate\Support\Arr;
 use Predis\Client as Predis;
 
 /**
- * @method int    del(array $keys)
+ * @method int    del($keys)
  * @method string dump($key)
  * @method int    exists($key)
  * @method int    expire($key, $seconds)
@@ -48,7 +48,7 @@ use Predis\Client as Predis;
  * @method int    setnx($key, $value)
  * @method int    setrange($key, $offset, $value)
  * @method int    strlen($key)
- * @method int    hdel($key, array $fields)
+ * @method int    hdel($key, $fields)
  * @method int    hexists($key, $field)
  * @method string hget($key, $field)
  * @method array  hgetall($key)

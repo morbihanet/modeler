@@ -457,4 +457,20 @@ class Item extends Record
     {
         return $this->db;
     }
+
+    public function __sleep()
+    {
+        $this['__db'] = get_class($this->db);
+
+        return ['options'];
+    }
+
+    public function __wakeup()
+    {
+        $db = $this->options['__db'];
+
+        unset($this->options['__db']);
+
+        $this->db = Core::get($db);
+    }
 }

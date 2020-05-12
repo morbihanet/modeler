@@ -716,7 +716,9 @@ class Iterator implements IteratorAggregate
     public function orWhere()
     {
         $wheres = func_get_args();
-        $results = array_merge($this->toArray(), Core::store()->where(...$wheres)->toArray());
+        $results = collect(
+            array_merge($this->toArray(), Core::store()->where(...$wheres)->toArray())
+        )->unique('id')->toArray();
 
         $callback = function () use ($results) {
             foreach ($results as $result) {
@@ -1718,6 +1720,13 @@ class Iterator implements IteratorAggregate
 
         if (self::hasMacro($name)) {
             return $this->macroCall($name, $arguments);
+        }
+
+        if (fnmatch('where*', $name) && strlen($name) > 5) {
+            if (fnmatch('where_*', $uncamelized = Core::uncamelize($name))) {
+                $name = 'where';
+                $arguments = array_merge([str_replace('where_', '', $uncamelized)], $arguments);
+            }
         }
 
         return $this->exec($name, $arguments);

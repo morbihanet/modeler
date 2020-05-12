@@ -13,10 +13,10 @@ class Store extends Db
     {
         $class = str_replace('\\', '.', Str::lower(get_called_class()));
 
-        $prefix = "dbs.$class";
+        $suffix = "dbs.$class";
 
         /** @var Builder $store */
-        $this->__store = $store = (new Warehouse)->setNamespace($prefix);
+        $this->__store = $store = (new Warehouse)->setNamespace($suffix);
 
         /** @var Modeler $modeler */
         $modeler = Core::get('modeler');

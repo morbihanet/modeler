@@ -4,6 +4,7 @@ namespace Morbihanet\Modeler\Test;
 
 use Morbihanet\Modeler\Core;
 use Morbihanet\Modeler\Redis;
+use Morbihanet\Modeler\Store;
 use Morbihanet\Modeler\FileStore;
 use Morbihanet\Modeler\MemoryStore;
 use Illuminate\Database\Schema\Blueprint;
@@ -76,10 +77,18 @@ abstract class TestCase extends Orchestra
         ]);
 
         $app['config']->set('modeler', [
+            'data_class' => 'App\\Data',
+            'datum_class' => 'App\\Datum\\Models',
             'model_class' => 'App\\Repositories',
             'item_class' => 'App\\Entities',
             'cache_ttl' => 24 * 3600,
-            'file_dir' => __DIR__ . '/data',
+            'file_dir' => storage_path("dbf"),
+            'user_model' => User::class,
+            'schedule_store' => Store::class,
+            'notification_store' => Store::class,
+            'bearer_store' => Store::class,
+            'modeler_store' => Store::class,
+            'scheduler_route' => '/modeler/scheduler/cron',
         ]);
     }
 
