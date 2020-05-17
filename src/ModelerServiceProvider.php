@@ -47,4 +47,15 @@ class ModelerServiceProvider extends ServiceProvider
             __DIR__.'/../config/modeler.php' => config_path('modeler.php'),
         ], 'modeler-config');
     }
+
+    public function register()
+    {
+        $this->app->singleton('mail.manager', function ($app) {
+            return new MailManager($app);
+        });
+
+        $this->app->bind('mailer', function ($app) {
+            return $app->make('mail.manager')->mailer();
+        });
+    }
 }

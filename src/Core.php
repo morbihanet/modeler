@@ -1,21 +1,29 @@
 <?php
 namespace Morbihanet\Modeler;
 
+use Error;
 use Closure;
+use Mockery;
 use Exception;
+use Swift_Mailer;
 use Faker\Factory;
 use ReflectionClass;
 use Faker\Generator;
 use ReflectionFunction;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
+use BadMethodCallException;
+use Illuminate\Mail\Message;
+use Illuminate\Mail\Markdown;
 use Illuminate\Support\Carbon;
 use Faker\Provider\fr_FR\Company;
 use Illuminate\Container\Container;
 use Illuminate\Support\Facades\Date;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
 use Faker\Provider\fr_FR\PhoneNumber;
 use Illuminate\Database\QueryException;
+use Illuminate\Mail\Transport\Transport;
 use Illuminate\Http\Client\Factory as Http;
 use Illuminate\Support\Facades\DB as DbMaster;
 use Illuminate\Validation\Factory as ValidatorFactory;
@@ -1155,11 +1163,11 @@ class Core
         $prefix = $prefix ?? '';
         $plural = Str::plural($model);
 
-        $index = Route::get($prefix . '/' . $plural, $controller . '@index')->name($plural . '_index');
+        $index  = Route::get($prefix . '/' . $plural, $controller . '@index')->name($plural . '_index');
         $create = Route::get($prefix . '/' . $plural . '/create', $controller . '@create')->name($plural . '_create');
-        $store = Route::post($prefix . '/' . $plural, $controller . '@store')->name($plural . '_store');
-        $show = Route::get($prefix . '/' . $model . '/{id}', $controller . '@show')->name($plural . '_show');
-        $edit = Route::get($prefix . '/' . $model . '/{id}/edit', $controller . '@edit')->name($plural . '_edit');
+        $store  = Route::post($prefix . '/' . $plural, $controller . '@store')->name($plural . '_store');
+        $show   = Route::get($prefix . '/' . $model . '/{id}', $controller . '@show')->name($plural . '_show');
+        $edit   = Route::get($prefix . '/' . $model . '/{id}/edit', $controller . '@edit')->name($plural . '_edit');
         $update = Route::match(
             ['PUT', 'PATCH'],
             $prefix . '/' . $model . '/{id}',
@@ -1320,5 +1328,129 @@ type="hidden"
 name="'.$csrf->getFormKey().'"
 value="'.static::getToken().'"
 >';
+    }
+
+    public static function helperMail(string $method, string $content, array $params): void
+    {
+        Mail::{$method}($content, function (Message $mail) use ($params) {
+            foreach ($params as $key => $value) {
+                if (fnmatch('attach*', $key) && strlen($key) > 6) {
+                    $key = 'attach';
+                }
+
+                $meth = Str::camel($key);
+
+                $mail->{$meth}($value);
+            }
+        });
+    }
+
+    public static function rawMail($content, array $params, array $paramsView = []): string
+    {
+        foreach ($paramsView as $param => $value) {
+            $content = str_replace("##$param##", $value, $content);
+        }
+
+        static::helperMail('raw', $content, $params);
+
+        return $content;
+    }
+
+    public static function viewMail(string $view, array $params, array $paramsView = []): string
+    {
+        $html = view($view, $paramsView)->render();
+
+        foreach ($paramsView as $param => $value) {
+            $html = str_replace("##$param##", $value, $html);
+        }
+
+        static::helperMail('html', $html, $params);
+
+        return $html;
+    }
+
+    public static function htmlMail(string $html, array $params, array $paramsView = []): string
+    {
+        foreach ($paramsView as $param => $value) {
+            $html = str_replace("##$param##", $value, $html);
+        }
+
+        static::helperMail('html', $html, $params);
+
+        return $html;
+    }
+
+    public static function remoteHtmlMail(string $html, array $params, array $paramsView = []): string
+    {
+        return static::switchTransport(new RemoteTransport, function () use ($html, $params, $paramsView) {
+            return static::htmlMail($html, $params, $paramsView);
+        });
+    }
+
+    public static function queueHtmlMail(string $html, array $params, array $paramsView = []): string
+    {
+        return static::switchTransport(new RemoteTransport(true), function () use ($html, $params, $paramsView) {
+            return static::htmlMail($html, $params, $paramsView);
+        });
+    }
+
+    public static function textMail(string $content, array $params, array $paramsView = []): string
+    {
+        foreach ($paramsView as $param => $value) {
+            $content = str_replace("##$param##", $value, $content);
+        }
+
+        static::helperMail('plain', $content, $params);
+
+        return $content;
+    }
+
+    public static function forwardCallTo($from, $target, $method, $parameters)
+    {
+        try {
+            return $target->{$method}(...$parameters);
+        } catch (Error | BadMethodCallException $e) {
+            $pattern = '~^Call to undefined method (?P<class>[^:]+)::(?P<method>[^\(]+)\(\)$~';
+
+            if (! preg_match($pattern, $e->getMessage(), $matches)) {
+                throw $e;
+            }
+
+            if ($matches['class'] !== get_class($target) ||
+                $matches['method'] !== $method) {
+                throw $e;
+            }
+
+            throw new BadMethodCallException(sprintf(
+                'Call to undefined method %s::%s()', get_class($from), $method
+            ));
+        }
+    }
+
+    public static function markdown(): Markdown
+    {
+        return Container::getInstance()->make(Markdown::class);
+    }
+
+    public static function getMock($class)
+    {
+        if (is_object($class)) {
+            $class = get_class($class);
+        }
+
+        return Mockery::mock($class);
+    }
+
+    public static function switchTransport(Transport $transport, callable $event)
+    {
+        $actual = Mail::getSwiftMailer();
+
+        Mail::setSwiftMailer(new Swift_Mailer($transport));
+
+        $data = $event();
+
+        Mail::setSwiftMailer($actual);
+
+        return $data;
     }
 }

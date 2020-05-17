@@ -7,6 +7,7 @@ use Morbihanet\Modeler\Redis;
 use Morbihanet\Modeler\Store;
 use Morbihanet\Modeler\FileStore;
 use Morbihanet\Modeler\MemoryStore;
+use Morbihanet\Modeler\MailManager;
 use Illuminate\Database\Schema\Blueprint;
 use Orchestra\Testbench\TestCase as Orchestra;
 use M6Web\Component\RedisMock\RedisMock as Mock;
@@ -40,6 +41,19 @@ abstract class TestCase extends Orchestra
         if (!is_dir(__DIR__ . '/data')) {
             mkdir(__DIR__ . '/data', 0777);
         }
+
+        $this->app->singleton('mail.manager', function ($app) {
+            return new MailManager($app);
+        });
+
+        $this->app->bind('mailer', function ($app) {
+            return $app->make('mail.manager')->mailer();
+        });
+
+        $this->app['config']->set('queue.default', 'sync');
+        $this->app['config']->set('mail.driver', 'remote');
+        $this->app['config']->set('mail.remote.url', '');
+        $this->app['config']->set('mail.remote.key', '');
     }
 
     public function tearDown(): void
@@ -99,6 +113,16 @@ abstract class TestCase extends Orchestra
             $table->longText('v')->nullable();
             $table->unsignedBigInteger('e')->index()->default(0);
             $table->timestamp('called_at')->nullable()->useCurrent();
+        });
+
+        $this->app['db']->connection()->getSchemaBuilder()->create('jobs', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->string('queue')->index();
+            $table->longText('payload');
+            $table->unsignedTinyInteger('attempts');
+            $table->unsignedInteger('reserved_at')->nullable();
+            $table->unsignedInteger('available_at');
+            $table->unsignedInteger('created_at');
         });
     }
 }
