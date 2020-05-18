@@ -191,7 +191,7 @@ class Session extends Store implements
      */
     public function setPreviousUrl($url): self
     {
-        $this->put('_previous.url', $url);
+        return $this->put('_previous.url', $url);
     }
 
     /**
