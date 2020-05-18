@@ -1,6 +1,8 @@
 <?php
 namespace Morbihanet\Modeler;
 
+use Illuminate\Http\Request;
+
 class MiddlewareCsrf
 {
     /**
@@ -46,12 +48,14 @@ class MiddlewareCsrf
     }
 
     /**
-     * @param  \Illuminate\Http\Request  $request
+     * @param  Request  $request
      * @param callable $next
      * @return mixed
      */
     public function handle($request, callable $next)
     {
+        $this->storeCurrentUrl($request, $this->session);
+
         $uri = $request->getRequestUri();
 
         $continue = true;
@@ -79,6 +83,18 @@ class MiddlewareCsrf
         }
 
         return $next($request);
+    }
+
+    protected function storeCurrentUrl(Request $request, $session)
+    {
+        if ($session instanceof Session) {
+            if ('GET' === $request->method() &&
+                $request->route() &&
+                !$request->ajax() &&
+                !$request->prefetch()) {
+                $session->setPreviousUrl($request->fullUrl());
+            }
+        }
     }
 
     /**

@@ -187,7 +187,7 @@ class Session extends Store implements
 
     /**
      * @param string $url
-     * @return NativeSession
+     * @return Session
      */
     public function setPreviousUrl($url): self
     {
