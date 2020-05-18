@@ -1405,6 +1405,51 @@ value="'.static::getToken().'"
         return $content;
     }
 
+    public static function ake(array $array, string $key, $default = null)
+    {
+        return Arr::get($array, $key, $default);
+    }
+
+    public static function oke($target, string $key, $default = null)
+    {
+        return data_get($target, $key, $default);
+    }
+
+    public static function fgc(string $url, int $max = 5)
+    {
+        static $round = 0;
+
+        ++$round;
+
+        try {
+            return file_get_contents($url);
+        } catch (Exception $e) {
+            if ($round <= $max) {
+                return static::fgc($url, $max);
+            }
+
+            return null;
+        }
+    }
+
+    public static function findIn(string $start, string $end, string $concern, ?string $default = null): ?string
+    {
+        if (!empty($concern) &&
+            !empty($start) &&
+            !empty($end) &&
+            strstr($concern, $start) &&
+            strstr($concern, $end)
+        ) {
+            $segment = explode($start, $concern, 2)[1];
+
+            if (!empty($segment) && strstr($segment, $end)) {
+                return explode($end, $segment, 2)[0];
+            }
+        }
+
+        return $default;
+    }
+
     public static function forwardCallTo($from, $target, $method, $parameters)
     {
         try {
