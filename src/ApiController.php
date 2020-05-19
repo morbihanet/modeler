@@ -15,9 +15,9 @@ class ApiController extends BaseController
         $this->resource = $this->getResourceName($request);
     }
 
-    public function index(Request $request)
+    public function index()
     {
-        return $this->showAll(datum($this->resource)::cursor());
+        return $this->showAll(datum($this->resource)::all());
     }
 
     public function store(Request $request)
@@ -27,27 +27,27 @@ class ApiController extends BaseController
         return $this->showOne($item);
     }
 
-    public function show(Request $request)
+    public function show($id)
     {
-        if ($item = datum($this->resource)::find($request->get('id'))) {
+        if ($item = datum($this->resource)::find((int) $id)) {
             return $this->showOne($item);
         }
 
         return $this->errorResponse('Resource not found', 404);
     }
 
-    public function update(Request $request)
+    public function update(Request $request, $id)
     {
-        if ($item = datum($this->resource)::find($request->get('id'))) {
+        if ($item = datum($this->resource)::find((int) $id)) {
             return $this->showOne($item->update($request->all()));
         }
 
         return $this->errorResponse('Resource not found', 404);
     }
 
-    public function destroy(Request $request)
+    public function destroy($id)
     {
-        if ($item = datum($this->resource)::find($id = $request->get('id'))) {
+        if ($item = datum($this->resource)::find((int) $id)) {
             $item->delete();
 
             return $this->successResponse(['message' => "Resource '$id' deleted"]);
