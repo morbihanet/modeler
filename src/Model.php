@@ -74,7 +74,7 @@ class Model extends Modeler implements ArrayAccess
     {
         $class = $this->itemClass();
 
-        return new $class(static::getDb(), $attributes);
+        return Event::fire('model:' . get_called_class() . ':newModel', new $class(static::getDb(), $attributes));
     }
 
     public function guarded(array $guarded): Model
@@ -93,6 +93,8 @@ class Model extends Modeler implements ArrayAccess
 
     public function save(?callable $callback = null)
     {
+        Event::fire('model:' . get_called_class() . ':save', $this);
+
         $data = $this->item->toArray();
 
         if ($this->item->exists()) {
@@ -130,6 +132,8 @@ class Model extends Modeler implements ArrayAccess
 
     public function __call(string $name, array $arguments)
     {
+        Event::fire('model:' . get_called_class() . ':' . $name, $this);
+
         $uncamelized = Core::uncamelize($name);
 
         if (

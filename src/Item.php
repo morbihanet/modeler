@@ -347,6 +347,8 @@ class Item extends Record
      */
     public function __call(string $name, array $arguments)
     {
+        Event::fire('item:'.get_called_class().':' . $name, $this);
+
         if (in_array($name, get_class_methods($modeler = $this->modeler()))) {
             $arguments[] = $this;
 
@@ -412,7 +414,7 @@ class Item extends Record
             }
         }
 
-        return $row;
+        return Event::fire('item:'.get_called_class().':toArray', $row);
     }
 
     /**
@@ -430,9 +432,7 @@ class Item extends Record
 
     public function getCreatedAt()
     {
-        $value = $this->created_at;
-
-        if ($value) {
+        if ($value = $this->created_at) {
             return Carbon::createFromTimestamp((int) $value);
         }
 

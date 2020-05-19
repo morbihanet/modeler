@@ -202,7 +202,8 @@ class Modeler
     {
         Core::set('modeler', $class = get_called_class());
 
-        return static::factorModel(static::getModelName($class))->{$name}(...$arguments);
+        return Event::fire('modeler:'.$class.':' . $name, static::factorModel(static::getModelName($class)))
+            ->{$name}(...$arguments);
     }
 
     public function __call(string $name, array $arguments)

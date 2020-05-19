@@ -1498,4 +1498,48 @@ value="'.static::getToken().'"
 
         return $data;
     }
+
+    public static function switchConnexion(string $connection, callable $event)
+    {
+        $default = DbMaster::getDefaultConnection();
+
+        DbMaster::setDefaultConnection($connection);
+
+        $data = $event();
+
+        DbMaster::setDefaultConnection($default);
+
+        return $data;
+    }
+
+    public static function fetch(string $query, array $bindings = [], bool $useReadPdo = true): Iterator
+    {
+        $db = function () use ($query, $bindings, $useReadPdo) {
+            foreach (DbMaster::select($query, $bindings, $useReadPdo) as $row) {
+                yield Record::make((array) $row);
+            }
+        };
+
+        return static::iterator($db);
+    }
+
+    public static function fetchOne(string $query, array $bindings = [], bool $useReadPdo = true)
+    {
+        return static::fetch($query, $bindings, $useReadPdo)->first();
+    }
+
+    public static function connection(?string $connection = null)
+    {
+        return DbMaster::connection($connection);
+    }
+
+    public static function table(string $table, string $as = null)
+    {
+        return DbMaster::table($table, $as);
+    }
+
+    public static function statement(string $sql, array $bindings = []): bool
+    {
+        return DbMaster::statement($sql, $bindings);
+    }
 }

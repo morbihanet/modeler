@@ -23,6 +23,11 @@ class Record implements \IteratorAggregate, \ArrayAccess, \Countable
         $this->options = $options;
     }
 
+    public static function make(array $options = []): self
+    {
+        return new static($options);
+    }
+
     /**
      * @return \ArrayIterator
      */

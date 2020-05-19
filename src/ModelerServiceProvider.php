@@ -26,6 +26,10 @@ class ModelerServiceProvider extends ServiceProvider
 
             $this->comment($json);
         })->describe('Run Modeler Scheduler tasks');
+
+        Artisan::command('modeler:seed', function () {
+            (new Seeder())->run();
+        })->describe('Run Modeler seeds');
     }
 
     private function registerMigrations()
@@ -56,6 +60,10 @@ class ModelerServiceProvider extends ServiceProvider
 
         $this->app->bind('mailer', function ($app) {
             return $app->make('mail.manager')->mailer();
+        });
+
+        Event::add('core.locale', function (string $locale) {
+            $this->app->setLocale($locale);
         });
     }
 }
