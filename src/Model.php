@@ -6,6 +6,7 @@ use ArrayAccess;
 class Model extends Modeler implements ArrayAccess
 {
     protected ?Item $item = null;
+    protected array $hidden = [];
     protected array $guarded = [];
     protected array $fillable = [];
 
@@ -13,7 +14,7 @@ class Model extends Modeler implements ArrayAccess
     {
         parent::__construct();
 
-        $this->item = static::getDb()->model($attributes);
+        $this->item = Core::model(static::getDb(), $attributes);
     }
 
     public function offsetExists($offset)
@@ -91,11 +92,24 @@ class Model extends Modeler implements ArrayAccess
         return $this;
     }
 
+    public function toArray(): array
+    {
+        $data = $this->item->toArray();
+
+        foreach ($data as $key => $value) {
+            if (in_array($key, $this->hidden)) {
+                unset($data[$key]);
+            }
+        }
+
+        return $data;
+    }
+
     public function save(?callable $callback = null)
     {
         Event::fire('model:' . get_called_class() . ':save', $this);
 
-        $data = $this->item->toArray();
+        $data = $this->toArray();
 
         if ($this->item->exists()) {
             unset($data['id']);

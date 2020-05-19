@@ -1156,7 +1156,7 @@ class Core
      */
     public static function resourcesRoutes(
         string $model,
-        string $controller,
+        string $controller = ApiController::class,
         $middleware = null,
         ?string $prefix = null
     ) {
@@ -1164,15 +1164,18 @@ class Core
         $plural = Str::plural($model);
 
         $index  = Route::get($prefix . '/' . $plural, $controller . '@index')->name($plural . '_index');
-        $create = Route::get($prefix . '/' . $plural . '/create', $controller . '@create')->name($plural . '_create');
         $store  = Route::post($prefix . '/' . $plural, $controller . '@store')->name($plural . '_store');
-        $show   = Route::get($prefix . '/' . $model . '/{id}', $controller . '@show')->name($plural . '_show');
-        $edit   = Route::get($prefix . '/' . $model . '/{id}/edit', $controller . '@edit')->name($plural . '_edit');
+        $show   = Route::get($prefix . '/' . $plural . '/{id}', $controller . '@show')->name($plural . '_show');
         $update = Route::match(
             ['PUT', 'PATCH'],
-            $prefix . '/' . $model . '/{id}',
+            $prefix . '/' . $plural . '/{id}',
             $controller . '@update')->name($plural . '_update');
-        $destroy = Route::delete($prefix . '/' . $model . '/{id}', $controller . '@destroy')->name($plural . '_destroy');
+        $destroy = Route::delete($prefix . '/' . $plural . '/{id}', $controller . '@destroy')->name($plural . '_destroy');
+
+        if (ApiController::class !== $controller) {
+            $create = Route::get($prefix . '/' . $plural . '/create', $controller . '@create')->name($plural . '_create');
+            $edit   = Route::get($prefix . '/' . $plural . '/{id}/edit', $controller . '@edit')->name($plural . '_edit');
+        }
 
         if (!is_null($middleware)) {
             if (is_string($middleware) || (is_array($middleware) && !Arr::isAssoc($middleware))) {
@@ -1199,12 +1202,15 @@ class Core
             }
 
             $index->middleware($indexMiddleware);
-            $create->middleware($createMiddleware);
             $store->middleware($storeMiddleware);
             $show->middleware($showMiddleware);
-            $edit->middleware($editMiddleware);
             $update->middleware($updateMiddleware);
             $destroy->middleware($destroyMiddleware);
+
+            if (ApiController::class !== $controller) {
+                $create->middleware($createMiddleware);
+                $edit->middleware($editMiddleware);
+            }
         }
     }
 
@@ -1514,13 +1520,11 @@ value="'.static::getToken().'"
 
     public static function fetch(string $query, array $bindings = [], bool $useReadPdo = true): Iterator
     {
-        $db = function () use ($query, $bindings, $useReadPdo) {
+        return static::iterator(function () use ($query, $bindings, $useReadPdo) {
             foreach (DbMaster::select($query, $bindings, $useReadPdo) as $row) {
                 yield Record::make((array) $row);
             }
-        };
-
-        return static::iterator($db);
+        });
     }
 
     public static function fetchOne(string $query, array $bindings = [], bool $useReadPdo = true)

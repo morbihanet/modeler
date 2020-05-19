@@ -2,6 +2,8 @@
 
 namespace Morbihanet\Modeler;
 
+use Illuminate\Support\Str;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -92,13 +94,6 @@ trait ApiResponse
 
     }
 
-    protected function transformData($data, $transformer)
-    {
-        $transformation = fractal($data, new $transformer);
-
-        return $transformation->toArray();
-    }
-
     protected function cacheResponse(Iterator $collection): array
     {
         $data = $collection->toArray();
@@ -114,5 +109,18 @@ trait ApiResponse
         return Cache::remember($fullUrl, 30/60, function() use ($data) {
             return $data;
         });
+    }
+
+    protected function getResourceName(Request $request): string
+    {
+        $parts = explode('/', $request->getRequestUri());
+
+        $resource = array_pop($parts);
+
+        if (is_numeric($resource)) {
+            $resource = array_pop($parts);
+        }
+
+        return Str::singular($resource);
     }
 }
