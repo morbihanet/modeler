@@ -22,6 +22,7 @@ use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
 use Faker\Provider\fr_FR\PhoneNumber;
+use Illuminate\Filesystem\Filesystem;
 use Illuminate\Database\QueryException;
 use Illuminate\Mail\Transport\Transport;
 use Illuminate\Http\Client\Factory as Http;
@@ -477,6 +478,16 @@ class Core
         return Factory::create(config('faker.language', $lng));
     }
 
+    public static function getModel(
+        string $model,
+        ?string $database = null,
+        array $attributes = [],
+        ?string $namespace = null,
+        bool $authenticable = false
+    ): Model {
+        return datum($model, $database, $attributes, $namespace, $authenticable);
+    }
+
     /**
      * @param Closure $transaction
      * @param Closure $onFail
@@ -590,9 +601,11 @@ class Core
      */
     public static function uncamelize(string $string, string $splitter = "_"): string
     {
-        $string = preg_replace('/(?!^)[[:upper:]][[:lower:]]/', '$0', preg_replace('/(?!^)[[:upper:]]+/', $splitter . '$0', $string));
-
-        return Str::lower($string);
+        return Str::lower(preg_replace(
+            '/(?!^)[[:upper:]][[:lower:]]/',
+            '$0',
+            preg_replace('/(?!^)[[:upper:]]+/', $splitter . '$0', $string)
+        ));
     }
 
     public static function explodePluckParameters($value, $key): array
@@ -1093,6 +1106,11 @@ class Core
         ?string $userModel = null
     ): Session {
         return Session::getInstance($namespace, $userKey, $userModel);
+    }
+
+    public static function files(): ?Filesystem
+    {
+        return app('files');
     }
 
     /**

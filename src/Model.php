@@ -17,6 +17,16 @@ class Model extends Modeler implements ArrayAccess
         $this->item = Core::model(static::getDb(), $attributes);
     }
 
+    public static function new(
+        string $model,
+        ?string $database = null,
+        array $attributes = [],
+        ?string $namespace = null,
+        bool $authenticable = false
+    ): self {
+        return datum($model, $database, $attributes, $namespace, $authenticable);
+    }
+
     public function offsetExists($offset)
     {
         return isset($this->item[$offset]);
