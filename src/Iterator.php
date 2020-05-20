@@ -720,13 +720,11 @@ class Iterator implements IteratorAggregate
             array_merge($this->toArray(), Core::store()->where(...$wheres)->toArray())
         )->unique('id')->toArray();
 
-        $callback = function () use ($results) {
+        return $this->over(function () use ($results) {
             foreach ($results as $result) {
                 yield $result;
             }
-        };
-
-        return $this->over($callback);
+        });
     }
 
     public function latest(string $column = 'created_at')
@@ -739,7 +737,12 @@ class Iterator implements IteratorAggregate
         return $this->sortBy($column);
     }
 
-    public function sortBy($column, $sort = 'ASC')
+    public function sortByDesc($column): self
+    {
+        return $this->sortBy($column, 'DESC');
+    }
+
+    public function sortBy($column, string $sort = 'ASC'): self
     {
         $descending = strtoupper($sort) === 'DESC';
 

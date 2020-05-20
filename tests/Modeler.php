@@ -1021,16 +1021,16 @@ class Modeler extends TestCase
     /** @test */
     public function we_can_use_or_query_by_model()
     {
-        $country = datum('country', 0)->create(['name' => 'Canada']);
+        $country = datum('country', 0, ['name' => 'Canada']);
         datum('product', 0)->create(['name' => 'TV', 'price' => 500]);
         datum('product', 0)->create(['name' => 'Computer', 'price' => 1000]);
-        datum('product', 0)->create(['name' => 'Book', 'price' => 15, 'country_id' => $country->id]);
+        datum('product', 0)->create(['name' => 'Book', 'price' => 15, 'country_id' => $country->getId()]);
 
         $this->assertEquals(3, datum('product', 0)->gt('price', 10)->count());
         $this->assertEquals(2, datum('product', 0)->gt('price', 100)->count());
         $this->assertEquals(3, datum('product', 0)->gt('price', 100)->orGt('price', 10)->count());
         $this->assertEquals(1, datum('product', 0)->gt('price', 100)->orGt('price', 10)->gte('price', 1000)->count());
-        $this->assertEquals(1, datum('product', 0)->gt('price', 10)->whereCountryId($country->id)->count());
+        $this->assertEquals(1, datum('product', 0)->gt('price', 10)->whereCountryId($country->getId())->count());
     }
 
     /** @test */

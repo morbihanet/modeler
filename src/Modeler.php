@@ -222,8 +222,7 @@ class Modeler
      */
     public static function factory(?callable $callable = null): Macro
     {
-        $db = static::getDb();
-        $factory = Macro::__instance('it_factory_' . get_class($db));
+        $factory = Macro::__instance('it_factory_' . get_class($db = static::getDb()));
 
         $factory->_times = 1;
 
@@ -233,10 +232,10 @@ class Modeler
             return $factory;
         })->new('make', function (array $attrs = [], bool $toCollection = false, ?Faker $faker = null) use ($factory, $callable, $db) {
             $collection = [];
+            $faker = $faker ?? Core::faker();
 
             for ($i = 0; $i < $factory->_times; ++$i) {
-                $row = is_callable($callable) ? $callable($faker ?? Core::faker()) : static::seeder($faker ??
-                    Core::faker());
+                $row = is_callable($callable) ? $callable($faker) : static::seeder($faker);
                 $collection[] = $db->model(array_merge($row, $attrs));
             }
 
@@ -253,10 +252,10 @@ class Modeler
             return $collection;
         })->new('create', function (array $attrs = [], bool $toCollection = false, ?Faker $faker = null) use ($factory, $callable, $db) {
             $collection = [];
+            $faker = $faker ?? Core::faker();
 
             for ($i = 0; $i < $factory->_times; ++$i) {
-                $row = is_callable($callable) ? $callable($faker ?? Core::faker()) : static::seeder($faker ??
-                    Core::faker());
+                $row = is_callable($callable) ? $callable($faker) : static::seeder($faker);
                 $collection[] = $db->model(array_merge($row, $attrs))->save();
             }
 

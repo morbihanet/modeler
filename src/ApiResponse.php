@@ -23,14 +23,12 @@ trait ApiResponse
     protected function showAll(Iterator $collection, int $perPage = 15, int $code = 200)
     {
         if ($collection->isEmpty()) {
-            return $this->successResponse(['data' => $collection->toArray()], $code);
+            return $this->successResponse(['data' => []], $code);
         }
 
-        $collection = $this->filterData($collection);
-        $collection = $this->sortData($collection);
-        $collection = $this->paginate($collection,$perPage);
-
-        return $this->successResponse(['data' => $this->cacheResponse($collection)], $code);
+        return $this->successResponse([
+            'data' => $this->cacheResponse($this->paginate($this->sortData($this->filterData($collection)), $perPage))
+        ], $code);
     }
 
     protected function showOne(Item $instance, int $code = 200)
@@ -57,7 +55,11 @@ trait ApiResponse
     protected function sortData(Iterator $collection)
     {
         if ($attribute = request()->has('sort_by')) {
-            $collection = $collection->sortBy->{$attribute};
+            $sortIn = Str::lower(request()->get('sort_in', 'asc'));
+
+            $method = 'asc' === $sortIn ? 'sortBy' : 'sortByDesc';
+
+            $collection = $collection->{$method}($attribute);
         }
 
         return $collection;
@@ -82,9 +84,9 @@ trait ApiResponse
             $page = LengthAwarePaginator::resolveCurrentPage();
         }
 
-        $results = $collection->slice(($page - 1) * $perPage, $perPage)->toArray();
-
-        $paginated = new LengthAwarePaginator($results, $collection->count(), $perPage, $page, [
+        $paginated = new LengthAwarePaginator(
+            $collection->slice(($page - 1) * $perPage, $perPage)->collect(),
+            $collection->count(), $perPage, $page, [
             'path' => LengthAwarePaginator::resolveCurrentPath(),
         ]);
 
@@ -94,7 +96,11 @@ trait ApiResponse
 
     }
 
-    protected function cacheResponse(Iterator $collection): array
+    /**
+     * @param LengthAwarePaginator|Iterator $collection
+     * @return array
+     */
+    protected function cacheResponse($collection): array
     {
         $data = $collection->toArray();
         $url = request()->url();
@@ -106,7 +112,7 @@ trait ApiResponse
 
         $fullUrl = "{$url}?{$queryString}";
 
-        return Cache::remember($fullUrl, 30/60, function() use ($data) {
+        return Cache::remember($fullUrl, config('modeler.cache_ttl', 1800), function() use ($data) {
             return $data;
         });
     }

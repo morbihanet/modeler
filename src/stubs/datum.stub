@@ -1,0 +1,11 @@
+<?php
+
+namespace App\Models\Datum;
+
+use Morbihanet\Modeler\Model;
+use Morbihanet\Modeler\Store;
+
+class DummyClass extends Model
+{
+    protected static string $store = Store::class;
+}

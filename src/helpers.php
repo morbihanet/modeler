@@ -153,7 +153,13 @@ if (!function_exists('datum')) {
         ?string $namespace = null,
         bool $authenticable = false
     ): Model {
-        if ($database) {
+        if (is_array($database)) {
+            $attributes = $database;
+
+            $database = null;
+        }
+
+        if (!empty($database)) {
             $model = $database . '_' . $model;
         }
 
@@ -170,7 +176,13 @@ if (!function_exists('datum')) {
             eval($code);
         }
 
-        return (new $class($attributes))->setAuthenticable($authenticable);
+        $object = (new $class)->setAuthenticable($authenticable);
+
+        if (!empty($attributes)) {
+            $object->fillAndSave($attributes);
+        }
+
+        return $object;
     }
 }
 
