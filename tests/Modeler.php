@@ -47,7 +47,10 @@ class Modeler extends TestCase
         $this->assertSame('bar', Core::config()['baz']);
         $this->assertSame('baz', Core::config()['foo']);
         $this->assertSame(3, Config::count());
-        $this->assertSame(3, $config::count());
+        $this->assertSame(3, $config->count());
+        $this->assertTrue(isset($config['baz']));
+        $this->assertFalse(isset($config['foobar']));
+        $this->assertSame(3, count($config->values()));
     }
 
     /** @test */
@@ -1031,6 +1034,8 @@ class Modeler extends TestCase
         $this->assertEquals(3, datum('product', 0)->gt('price', 100)->orGt('price', 10)->count());
         $this->assertEquals(1, datum('product', 0)->gt('price', 100)->orGt('price', 10)->gte('price', 1000)->count());
         $this->assertEquals(1, datum('product', 0)->gt('price', 10)->whereCountryId($country->getId())->count());
+        $this->assertEquals(1, datum('product', 0)->hasCountry()->count());
+        $this->assertEquals(2, datum('product', 0)->doesntHaveCountry()->count());
     }
 
     /** @test */

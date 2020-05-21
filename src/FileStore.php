@@ -6,7 +6,7 @@ use Illuminate\Support\Str;
 class FileStore extends Db
 {
     /** @var string */
-    protected $__prefix;
+    protected ?string $__prefix = null;
 
     public function __construct(array $attributes = [])
     {
@@ -18,11 +18,11 @@ class FileStore extends Db
             mkdir($prefix, 0777, true);
         }
 
-        $db = function () {
+        $this->__resolver = function () {
             $files = $this->glob('*.row');
 
             foreach ($files as $file) {
-                yield $this->unserialize(app('files')->get($file));
+                yield $this->unserialize(Core::files()->get($file));
             }
         };
 
@@ -30,7 +30,7 @@ class FileStore extends Db
             $this->__model = $this->model($attributes);
         }
 
-        parent::__construct(Core::iterator($db)->setModel($this));
+        parent::__construct(Core::iterator($this->getResolver())->setModel($this));
     }
 
     /**
@@ -102,7 +102,7 @@ class FileStore extends Db
         $chmod = false;
 
         if (file_exists($file)) {
-            $old = (int) app('files')->get($file);
+            $old = (int) Core::files()->get($file);
             $id = $old + 1;
         } else {
             $chmod = true;
@@ -124,7 +124,7 @@ class FileStore extends Db
     {
         $file = $this->__prefix . '/ids';
 
-        return file_exists($file) ? (int) app('files')->get($file) : 1;
+        return file_exists($file) ? (int) Core::files()->get($file) : 1;
     }
 
     /**
@@ -145,23 +145,23 @@ class FileStore extends Db
     public function find($id, $default = null)
     {
         if (is_array($id)) {
-            $db = function () use ($id) {
+            $this->__resolver = function () use ($id) {
                 foreach ($id as $idRow) {
                     $file = $this->__prefix . '/'.$idRow.'.row';
 
                     if (file_exists($file)) {
-                        yield $this->unserialize(app('files')->get($file));
+                        yield $this->unserialize(Core::files()->get($file));
                     }
                 }
             };
 
-            return $this->setEngine(Core::iterator($db)->setModel($this));
+            return $this->setEngine(Core::iterator($this->getResolver())->setModel($this));
         }
 
         $file = $this->__prefix . '/'.$id.'.row';
 
         if (file_exists($file)) {
-            return $this->model($this->unserialize(app('files')->get($file)));
+            return $this->model($this->unserialize(Core::files()->get($file)));
         }
 
         return $default;
@@ -200,17 +200,18 @@ class FileStore extends Db
      */
     public function beginTransaction()
     {
+        $files = Core::files();
         $transactionalDir = $this->__prefix . '__trx';
-        app('files')->deleteDirectory($transactionalDir);
+        $files->deleteDirectory($transactionalDir);
 
         if (!is_dir($this->__prefix)) {
-            app('files')->makeDirectory($this->__prefix, 0777);
+            $files->makeDirectory($this->__prefix, 0777);
         } else {
-            app('files')->deleteDirectory($this->__prefix);
-            app('files')->makeDirectory($this->__prefix, 0777);
+            $files->deleteDirectory($this->__prefix);
+            $files->makeDirectory($this->__prefix, 0777);
         }
 
-        $copy = app('files')->copyDirectory($this->__prefix, $transactionalDir);
+        $copy = $files->copyDirectory($this->__prefix, $transactionalDir);
 
         if (true === $copy) {
             $this->__prefix = $transactionalDir;
@@ -226,11 +227,12 @@ class FileStore extends Db
      */
     public function commit()
     {
+        $files = Core::files();
         $nativePrefix = str_replace('__trx', '', $this->__prefix);
 
-        $delete = app('files')->deleteDirectory($nativePrefix);
-        $copy   = app('files')->copyDirectory($this->__prefix, $nativePrefix);
-        $clean  = app('files')->deleteDirectory($this->__prefix);
+        $delete = $files->deleteDirectory($nativePrefix);
+        $copy   = $files->copyDirectory($this->__prefix, $nativePrefix);
+        $clean  = $files->deleteDirectory($this->__prefix);
 
         $this->__prefix = $nativePrefix;
 
@@ -242,7 +244,7 @@ class FileStore extends Db
      */
     public function rollback()
     {
-        $delete = app('files')->deleteDirectory($this->__prefix);
+        $delete = Core::files()->deleteDirectory($this->__prefix);
 
         $this->__prefix = str_replace('__trx', '', $this->__prefix);
 
@@ -251,7 +253,7 @@ class FileStore extends Db
 
     public static function empty()
     {
-        app('files')->deleteDirectory(config('modeler.file_dir'));
+        Core::files()->deleteDirectory(config('modeler.file_dir'));
     }
 
     /**
@@ -259,7 +261,7 @@ class FileStore extends Db
      */
     public function flush()
     {
-        app('files')->deleteDirectory($this->__prefix);
+        Core::files()->deleteDirectory($this->__prefix);
         $status = !is_dir($this->__prefix);
 
         mkdir($this->__prefix, true);
@@ -345,7 +347,7 @@ class FileStore extends Db
             file_put_contents($file, $this->serialize($ids));
             chmod($file, 0777);
         } else {
-            $ids = $this->unserialize(app('files')->get($file));
+            $ids = $this->unserialize(Core::files()->get($file));
         }
 
         return $this->withIds($ids);

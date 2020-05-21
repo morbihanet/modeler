@@ -2,6 +2,7 @@
 namespace Morbihanet\Modeler;
 
 use Illuminate\Support\Str;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Traits\Macroable;
 
 class Record implements \IteratorAggregate, \ArrayAccess, \Countable
@@ -23,9 +24,20 @@ class Record implements \IteratorAggregate, \ArrayAccess, \Countable
         $this->options = $options;
     }
 
-    public static function make(array $options = []): self
+    public static function make($options = []): self
     {
-        return new static($options);
+        $options = (array) $options;
+        $record = new static;
+
+        foreach ($options as $key => $value) {
+            if (is_array($value) && Arr::isAssoc($value)) {
+                $record[$key] = static::make($value);
+            } else {
+                $record[$key] = $value;
+            }
+        }
+
+        return $record;
     }
 
     /**

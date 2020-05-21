@@ -6,8 +6,7 @@ use Illuminate\Database\Eloquent\Builder;
 
 class LiteStore extends Db
 {
-    /** @var Memory */
-    protected $__store;
+    protected ?Memory $__store = null;
 
     public function __construct($attributes = [])
     {
@@ -18,7 +17,7 @@ class LiteStore extends Db
         /** @var Builder $store */
         $this->__store = $store = (new Memory)->setNamespace($prefix);
 
-        $db = function () use ($store) {
+        $this->__resolver = function () use ($store) {
             $rows = $store->select('v')->where('k', 'like', $store->getNamespace() . '.row.%')->cursor();
 
             /** @var \Illuminate\Database\Eloquent\Model $row */
@@ -31,7 +30,7 @@ class LiteStore extends Db
             $this->__model = $this->model($attributes);
         }
 
-        parent::__construct(Core::iterator($db)->setModel($this));
+        parent::__construct(Core::iterator($this->getResolver())->setModel($this));
     }
 
     /**
@@ -147,7 +146,7 @@ class LiteStore extends Db
     public function find($id, $default = null)
     {
         if (is_array($id)) {
-            $db = function () use ($id) {
+            $this->__resolver = function () use ($id) {
                 foreach ($id as $idRow) {
                     /** @var \Illuminate\Database\Eloquent\Model $row */
                     $row = $this->__store->find($this->__store->getNamespace() . '.row.' . $idRow);
@@ -158,7 +157,7 @@ class LiteStore extends Db
                 }
             };
 
-            return $this->setEngine(Core::iterator($db)->setModel($this));
+            return $this->setEngine(Core::iterator($this->getResolver())->setModel($this));
         }
 
         /** @var \Illuminate\Database\Eloquent\Model $row */

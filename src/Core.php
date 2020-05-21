@@ -28,6 +28,7 @@ use Illuminate\Mail\Transport\Transport;
 use Illuminate\Http\Client\Factory as Http;
 use Illuminate\Support\Facades\DB as DbMaster;
 use Illuminate\Validation\Factory as ValidatorFactory;
+use Symfony\Component\HttpFoundation\File\Exception\FileException;
 
 class Core
 {
@@ -68,14 +69,14 @@ class Core
 
     /**
      * @param string $key
-     * @param $value
-     * @return static
+     * @param mixed $value
+     * @return mixed
      */
-    public static function set(string $key, $value): self
+    public static function set(string $key, $value)
     {
         static::$data[$key] = $value;
 
-        return new static;
+        return $value;
     }
 
     /**
@@ -446,9 +447,7 @@ class Core
             return $iterator->orWhere(...func_get_args());
         });
 
-        static::set('store', $iterator);
-
-        return $iterator;
+        return static::set('store', $iterator);
     }
 
     public static function app(?Container $app = null): ?Container
@@ -1142,7 +1141,7 @@ class Core
 
     /**
      * @param $item
-     * @return Store|FileStore|RedisStore|MemoryStore
+     * @return Store|FileStore|RedisStore|MemoryStore|LiteStore
      */
     public static function getDb($item)
     {
@@ -1563,5 +1562,23 @@ value="'.static::getToken().'"
     public static function statement(string $sql, array $bindings = []): bool
     {
         return DbMaster::statement($sql, $bindings);
+    }
+
+    public static function upload(string $field, string $name = 'file', ?string $directory = null)
+    {
+        $request = request();
+        $directory = $directory ?? storage_path();
+
+        if ($request->hasFile($field) && $request->file($field)->isValid()) {
+            $filename = $name . '.' . $request->file($field)->guessExtension();
+
+            try {
+                $request->file($field)->move($directory, $filename);
+
+                return true;
+            } catch (FileException $e) {
+                return false;
+            }
+        }
     }
 }

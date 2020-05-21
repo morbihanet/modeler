@@ -8,7 +8,6 @@ class Valued extends Modeler implements ArrayAccess
     protected static string $store = MemoryStore::class;
     protected static array $instances = [];
 
-
     public static function getInstance(): self
     {
         if (!$instance = static::$instances[$class = get_called_class()] ?? null) {
@@ -16,6 +15,12 @@ class Valued extends Modeler implements ArrayAccess
         }
 
         return $instance;
+    }
+
+    public function values()
+    {
+        return collect($this->select('k', 'v')->all()->toArray())->pluck('v', 'k')
+        ->toArray();
     }
 
     public function offsetExists($offset)

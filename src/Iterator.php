@@ -9,13 +9,11 @@ use ArrayIterator;
 use JsonSerializable;
 use IteratorAggregate;
 use Illuminate\Support\Str;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Enumerable;
 use Illuminate\Support\LazyCollection;
 use Illuminate\Support\Traits\Macroable;
 use Illuminate\Contracts\Support\Jsonable;
-use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 /**
@@ -88,7 +86,7 @@ class Iterator implements IteratorAggregate
             return $items;
         } elseif ($items instanceof Enumerable) {
             return $items->all();
-        } elseif ($items instanceof Arrayable) {
+        } elseif (Core::arrayable($items)) {
             return $items->toArray();
         } elseif ($items instanceof Jsonable) {
             return json_decode($items->toJson(), true);
@@ -413,20 +411,18 @@ class Iterator implements IteratorAggregate
     /**
      * @param callable|null $callback
      * @param null $default
-     * @return mixed|stdClass|null
+     * @return mixed|Item|null
      */
-    public function last(?callable $callback = null, $default = null)
+    public function last(?callable $callback = null, $default = null): ?Item
     {
         $array      = iterator_to_array($this->getIterator());
         $reverse    = array_reverse($array);
 
-        $cb = function () use ($reverse) {
+        return $this->over(function () use ($reverse) {
             foreach ($reverse as $key => $value) {
                 yield $key => $value;
             }
-        };
-
-        return $this->over($cb)->first($callback, $default);
+        })->first($callback, $default);
     }
 
 
@@ -434,7 +430,7 @@ class Iterator implements IteratorAggregate
      * @param callable $callback
      * @return Iterator
      */
-    public function tap(callable $callback)
+    public function tap(callable $callback): self
     {
         return $this->over(function () use ($callback) {
             foreach ($this as $key => $value) {
@@ -479,7 +475,7 @@ class Iterator implements IteratorAggregate
     public function chunk($size): self
     {
         if ($size <= 0) {
-            return self::empty();
+            return static::empty();
         }
 
         return $this->over(function () use ($size) {
@@ -514,7 +510,7 @@ class Iterator implements IteratorAggregate
      * @param int $perPage
      * @return Iterator
      */
-    public function forPage(int $page, $perPage = 15)
+    public function forPage(int $page, int $perPage = 15): self
     {
         if (1 === $page) {
             return $this->take($perPage);
@@ -542,7 +538,7 @@ class Iterator implements IteratorAggregate
      * @param null $length
      * @return Iterator
      */
-    public function slice($offset, $length = null)
+    public function slice($offset, $length = null): self
     {
         if ($offset < 0 || $length < 0) {
             return $this->exec('slice', func_get_args());
@@ -554,10 +550,10 @@ class Iterator implements IteratorAggregate
     }
 
     /**
-     * @param $count
+     * @param int $count
      * @return Iterator
      */
-    public function skip($count)
+    public function skip(int $count): self
     {
         return $this->over(function () use ($count) {
             $iterator = $this->getIterator();
@@ -579,7 +575,7 @@ class Iterator implements IteratorAggregate
      * @param  string|null  $key
      * @return Iterator
      */
-    public function pluck($value, ?string $key = null)
+    public function pluck($value, ?string $key = null): self
     {
         return $this->over(function () use ($value, $key) {
             [$value, $key] = Core::explodePluckParameters($value, $key);
@@ -606,7 +602,7 @@ class Iterator implements IteratorAggregate
      * @param callable $callback
      * @return Iterator
      */
-    public function map(callable $callback)
+    public function map(callable $callback): self
     {
         return $this->over(function () use ($callback) {
             foreach ($this as $key => $value) {
@@ -627,9 +623,9 @@ class Iterator implements IteratorAggregate
     /**
      * @param $value
      * @param string $key
-     * @return mixed|null
+     * @return item|null
      */
-    public function find($value, string $key = 'id')
+    public function find($value, string $key = 'id'): ?item
     {
         return $this->where($key, $value)->first();
     }
@@ -639,7 +635,7 @@ class Iterator implements IteratorAggregate
      * @param $value
      * @return Iterator
      */
-    public function findBy($key, $value = null)
+    public function findBy($key, $value = null): self
     {
         if (is_array($key) && null === $value) {
             $instance = $this;
@@ -661,9 +657,9 @@ class Iterator implements IteratorAggregate
     /**
      * @param $criteria
      * @param null $order
-     * @return Iterator|null
+     * @return Item|null
      */
-    public function findOneBy($key, $value = null, $order = null)
+    public function findOneBy($key, $value = null, $order = null): ?Item
     {
         $result = $this->findBy($key, $value);
 
@@ -673,9 +669,9 @@ class Iterator implements IteratorAggregate
     /**
      * @param string $key
      * @param $value
-     * @return mixed|null
+     * @return Item|null
      */
-    public function firstWhere(string $key, $value)
+    public function firstWhere(string $key, $value): ?Item
     {
         return $this->where($key, $value)->first();
     }
@@ -683,9 +679,9 @@ class Iterator implements IteratorAggregate
     /**
      * @param string $key
      * @param $value
-     * @return mixed|null
+     * @return Item|null
      */
-    public function lastWhere(string $key, $value)
+    public function lastWhere(string $key, $value): ?Item
     {
         return $this->where($key, $value)->last();
     }
@@ -695,9 +691,9 @@ class Iterator implements IteratorAggregate
      * @param $value
      * @return mixed|Item|null
      */
-    public function firstBy($field, $value)
+    public function firstBy($field, $value): ?Item
     {
-        return $this->findBy($field, $value)->first();
+        return $this->findOneBy($field, $value);
     }
 
     /**
@@ -705,19 +701,24 @@ class Iterator implements IteratorAggregate
      * @param $value
      * @return mixed|stdClass|null
      */
-    public function lastBy($field, $value)
+    public function lastBy($field, $value): ?Item
     {
         return $this->findBy($field, $value)->last();
+    }
+
+    public function newQuery(): self
+    {
+        return Core::iterator($this->getModel()->getResolver())->setModel($this->getModel());
     }
 
     /**
      * @return Iterator
      */
-    public function orWhere()
+    public function orWhere(): self
     {
         $wheres = func_get_args();
         $results = collect(
-            array_merge($this->toArray(), Core::store()->where(...$wheres)->toArray())
+            array_merge($this->toArray(), $this->newQuery()->where(...$wheres)->toArray())
         )->unique('id')->toArray();
 
         return $this->over(function () use ($results) {
@@ -727,12 +728,12 @@ class Iterator implements IteratorAggregate
         });
     }
 
-    public function latest(string $column = 'created_at')
+    public function latest(string $column = 'created_at'): self
     {
         return $this->sortBy($column, 'DESC');
     }
 
-    public function oldest(string $column = 'created_at')
+    public function oldest(string $column = 'created_at'): self
     {
         return $this->sortBy($column);
     }
@@ -819,7 +820,7 @@ class Iterator implements IteratorAggregate
 
     /**
      * @param $conditions
-     * @return $this
+     * @return Iterator
      */
     public function search($conditions): self
     {
@@ -836,7 +837,7 @@ class Iterator implements IteratorAggregate
      * @param Item $item
      * @return bool
      */
-    public function contains(Item $item)
+    public function contains(Item $item): bool
     {
         $db = Core::getDb($item);
         $fk = $db->getConcern(get_class($item)) . '_id';
@@ -856,7 +857,7 @@ class Iterator implements IteratorAggregate
      * @param Item $item
      * @return bool
      */
-    public function notContains(Item $item)
+    public function notContains(Item $item): bool
     {
         return !$this->contains($item);
     }
@@ -864,9 +865,9 @@ class Iterator implements IteratorAggregate
     /**
      * @param string $field
      * @param $value
-     * @return $this|Iterator
+     * @return Iterator
      */
-    public function likeI(string $field, $value)
+    public function likeI(string $field, $value): self
     {
         return $this->where($field, 'like i', $value);
     }
@@ -876,7 +877,7 @@ class Iterator implements IteratorAggregate
      * @param $value
      * @return Iterator
      */
-    public function orLikeI(string $field, $value)
+    public function orLikeI(string $field, $value): self
     {
         return $this->orWhere($field, 'like i', $value);
     }
@@ -886,7 +887,7 @@ class Iterator implements IteratorAggregate
      * @param $value
      * @return $this|Iterator
      */
-    public function notLikeI(string $field, $value)
+    public function notLikeI(string $field, $value): self
     {
         return $this->where($field, 'not like i', $value);
     }
@@ -896,7 +897,7 @@ class Iterator implements IteratorAggregate
      * @param $value
      * @return Iterator
      */
-    public function orNotLikeI(string $field, $value)
+    public function orNotLikeI(string $field, $value): self
     {
         return $this->orWhere($field, 'not like i', $value);
     }
@@ -1405,13 +1406,13 @@ class Iterator implements IteratorAggregate
      * @param bool $strict
      * @return $this
      */
-    public function before($date, bool $strict = true): self
+    public function before($date, string $field = 'created_at', bool $strict = true): self
     {
         if (!is_int($date)) {
             $date = (int) $date->timestamp;
         }
 
-        return $strict ? $this->lt('created_at', $date) : $this->lte('created_at', $date);
+        return $strict ? $this->lt($field, $date) : $this->lte($field, $date);
     }
 
     /**
@@ -1419,13 +1420,9 @@ class Iterator implements IteratorAggregate
      * @param bool $strict
      * @return $this
      */
-    public function whereBefore($date, bool $strict = true): self
+    public function whereBefore($date, string $field = 'created_at', bool $strict = true): self
     {
-        if (!is_int($date)) {
-            $date = (int) $date->timestamp;
-        }
-
-        return $strict ? $this->lt('created_at', $date) : $this->lte('created_at', $date);
+        return $this->before($date, $field, $strict);
     }
 
     /**
@@ -1433,13 +1430,13 @@ class Iterator implements IteratorAggregate
      * @param bool $strict
      * @return $this
      */
-    public function orBefore($date, bool $strict = true): self
+    public function orBefore($date, string $field = 'created_at', bool $strict = true): self
     {
         if (!is_int($date)) {
             $date = (int) $date->timestamp;
         }
 
-        return $strict ? $this->orLt('created_at', $date) : $this->orLte('created_at', $date);
+        return $strict ? $this->orLt($field, $date) : $this->orLte($field, $date);
     }
 
     /**
@@ -1447,13 +1444,13 @@ class Iterator implements IteratorAggregate
      * @param bool $strict
      * @return $this
      */
-    public function after($date, bool $strict = true): self
+    public function after($date, string $field = 'created_at', bool $strict = true): self
     {
         if (!is_int($date)) {
             $date = (int) $date->timestamp;
         }
 
-        return $strict ? $this->gt('created_at', $date) : $this->gte('created_at', $date);
+        return $strict ? $this->gt($field, $date) : $this->gte($field, $date);
     }
 
 
@@ -1462,13 +1459,9 @@ class Iterator implements IteratorAggregate
      * @param bool $strict
      * @return $this
      */
-    public function whereAfter($date, bool $strict = true): self
+    public function whereAfter($date, string $field = 'created_at', bool $strict = true): self
     {
-        if (!is_int($date)) {
-            $date = (int) $date->timestamp;
-        }
-
-        return $strict ? $this->gt('created_at', $date) : $this->gte('created_at', $date);
+        return $this->after($date, $field, $strict);
     }
 
     /**
@@ -1476,13 +1469,13 @@ class Iterator implements IteratorAggregate
      * @param bool $strict
      * @return $this
      */
-    public function orAfter($date, bool $strict = true): self
+    public function orAfter($date, string $field = 'created_at', bool $strict = true): self
     {
         if (!is_int($date)) {
             $date = (int) $date->timestamp;
         }
 
-        return $strict ? $this->orGt('created_at', $date) : $this->orGte('created_at', $date);
+        return $strict ? $this->orGt($field, $date) : $this->orGte($field, $date);
     }
 
     /**
@@ -1506,13 +1499,9 @@ class Iterator implements IteratorAggregate
      * @param $date
      * @return $this
      */
-    public function WhereWhen(string $field, $op, $date): self
+    public function whereWhen(string $field, $op, $date): self
     {
-        if (!is_int($date)) {
-            $date = (int) $date->timestamp;
-        }
-
-        return $this->where($field, $op, $date);
+        return $this->when($field, $op, $date);
     }
 
     /**
@@ -1559,17 +1548,7 @@ class Iterator implements IteratorAggregate
      */
     public function count(): int
     {
-        if (is_array($this->scope)) {
-            return count($this->scope);
-        }
-
-        $count = 0;
-
-        foreach ($this as $row) {
-            ++$count;
-        }
-
-        return $count;
+        return count(array_keys($this->toArray()));
     }
 
     /**
@@ -1593,7 +1572,7 @@ class Iterator implements IteratorAggregate
     /**
      * @return Iterator
      */
-    public function getValues()
+    public function getValues(): self
     {
         return $this->over(function () {
             foreach ($this as $item) {
@@ -1602,7 +1581,7 @@ class Iterator implements IteratorAggregate
         });
     }
 
-    public function insert($values)
+    public function insert(array $values): bool
     {
         $model = $this->getModel();
 
@@ -1637,7 +1616,7 @@ class Iterator implements IteratorAggregate
         return $db->model($attributes + $values);
     }
 
-    public function firstOr(Closure $callback = null)
+    public function firstOr(?Closure $callback = null)
     {
         if (!is_null($model = $this->first())) {
             return $model;
@@ -1646,9 +1625,9 @@ class Iterator implements IteratorAggregate
         return value($callback);
     }
 
-    public function findMany($ids)
+    public function findMany($ids): self
     {
-        $ids = $ids instanceof Arrayable ? $ids->toArray() : $ids;
+        $ids = Core::arrayable($ids) ? $ids->toArray() : $ids;
 
         if (empty($ids)) {
             return $this;
@@ -1661,7 +1640,7 @@ class Iterator implements IteratorAggregate
     {
         $result = $this->find($id);
 
-        $id = $id instanceof Arrayable ? $id->toArray() : $id;
+        $id = Core::arrayable($id) ? $id->toArray() : $id;
 
         if (is_array($id)) {
             if (count($result) === count(array_unique($id))) {
@@ -1676,7 +1655,7 @@ class Iterator implements IteratorAggregate
         );
     }
 
-    public function findOrNew($id)
+    public function findOrNew($id): Item
     {
         if (!is_null($model = $this->find($id))) {
             return $model;
@@ -1692,7 +1671,7 @@ class Iterator implements IteratorAggregate
      * @param array $values
      * @return bool
      */
-    public function updateOrInsert(array $attributes, array $values = [])
+    public function updateOrInsert(array $attributes, array $values = []): bool
     {
         if (!$this->where($attributes)->exists()) {
             return $this->insert(array_merge($attributes, $values));
@@ -1732,14 +1711,29 @@ class Iterator implements IteratorAggregate
             }
         }
 
+        if (fnmatch('has*', $name) && strlen($name) > 3) {
+            if (fnmatch('has_*', $uncamelized = Core::uncamelize($name))) {
+                $name = 'where';
+                $arguments = array_merge([str_replace('has_', '', $uncamelized . '_id'), '>', 0], $arguments);
+            }
+        }
+
+        if (fnmatch('doesntHave*', $name) && strlen($name) > 10) {
+            if (fnmatch('doesnt_have_*', $uncamelized = Core::uncamelize($name))) {
+                $name = 'where';
+                $arguments = array_merge(
+                    [str_replace('doesnt_have_', '', $uncamelized . '_id'), 'is', null],
+                    $arguments
+                );
+            }
+        }
+
         return $this->exec($name, $arguments);
     }
 
     /**
-     * Get the average value of a given key.
-     *
      * @param  callable|string|null  $callback
-     * @return mixed
+     * @return float|int|mixed
      */
     public function avg($callback = null)
     {
@@ -1759,12 +1753,12 @@ class Iterator implements IteratorAggregate
      * @param  string|array|null  $key
      * @return array|null
      */
-    public function mode($key = null)
+    public function mode($key = null): ?array
     {
         return $this->collect()->mode($key);
     }
 
-    public function collapse()
+    public function collapse(): self
     {
         return new static(function () {
             foreach ($this as $values) {
@@ -1780,7 +1774,7 @@ class Iterator implements IteratorAggregate
     /**
      * @param $method
      * @param array $params
-     * @return Iterator
+     * @return mixed|Iterator
      */
     public function exec($method, array $params)
     {

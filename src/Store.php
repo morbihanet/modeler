@@ -1,6 +1,7 @@
 <?php
 namespace Morbihanet\Modeler;
 
+use Closure;
 use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -25,7 +26,7 @@ class Store extends Db
             $this->__store->setConnection($modeler::$connection);
         }
 
-        $db = function () use ($store) {
+        $this->__resolver = function () use ($store) {
             $rows = $store->select('v')->where('k', 'like', $store->getNamespace() . '.row.%')->cursor();
 
             /** @var \Illuminate\Database\Eloquent\Model $row */
@@ -38,7 +39,7 @@ class Store extends Db
             $this->__model = $this->model($attributes);
         }
 
-        parent::__construct(Core::iterator($db)->setModel($this));
+        parent::__construct(Core::iterator($this->getResolver())->setModel($this));
     }
 
     /**
@@ -154,7 +155,7 @@ class Store extends Db
     public function find($id, $default = null)
     {
         if (is_array($id)) {
-            $db = function () use ($id) {
+            $this->__resolver = function () use ($id) {
                 foreach ($id as $idRow) {
                     /** @var \Illuminate\Database\Eloquent\Model $row */
                     $row = $this->__store->find($this->__store->getNamespace() . '.row.' . $idRow);
@@ -165,7 +166,7 @@ class Store extends Db
                 }
             };
 
-            return $this->setEngine(Core::iterator($db)->setModel($this));
+            return $this->setEngine(Core::iterator($this->getResolver())->setModel($this));
         }
 
         /** @var \Illuminate\Database\Eloquent\Model $row */

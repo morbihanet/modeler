@@ -1,6 +1,7 @@
 <?php
 namespace Morbihanet\Modeler;
 
+use Closure;
 use Illuminate\Support\Str;
 use Illuminate\Support\Arr;
 use Faker\Generator as Faker;
@@ -24,37 +25,18 @@ class Db
         Macroable::__call as macroCall;
     }
 
-    /** @var Iterator */
-    protected $engine;
-
+    protected ?Iterator $engine = null;
     protected ?string $modeler = null;
-
-    /** @var array */
     protected array $withQuery = [];
-
-    /** @var int */
-    protected $__count = 0;
-
-    /** @var bool */
-    protected $__cache = false;
-
-    /** @var bool */
-    protected $__where = false;
-
-    /** @var ?Item */
+    protected int $__count = 0;
+    protected bool $__cache = false;
+    protected bool $__where = false;
     protected ?Item $__model = null;
-
-    /** @var array */
-    protected static $__ids = [];
-
-    /** @var array */
-    protected static $__booted = [];
-
-    /** @var array */
-    protected $__select = [];
-
-    /** @var array */
-    protected $__wheres = [];
+    protected static array $__ids = [];
+    protected static array $__booted = [];
+    protected array $__select = [];
+    protected array $__wheres = [];
+    protected ?Closure $__resolver = null;
 
     public function __construct(Iterator $engine)
     {
@@ -668,6 +650,32 @@ class Db
         $this->modeler = $modeler;
 
         return $this;
+    }
+
+    public function switchResolver(Closure $resolver, callable $callable)
+    {
+        $old = $this->getResolver();
+
+        $data = $callable($this->setResolver($resolver));
+
+        $this->setResolver($old);
+
+        return $data;
+    }
+
+    public function setResolver(?Closure $resolver = null): self
+    {
+        $this->__resolver = $resolver;
+
+        return $this;
+    }
+
+    /**
+     * @return Closure|null
+     */
+    public function getResolver(): ?Closure
+    {
+        return $this->__resolver;
     }
 
     /**

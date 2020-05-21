@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Morbihanet\Modeler\Store;
 use Morbihanet\Modeler\Model;
 use Morbihanet\Modeler\Valued;
+use Morbihanet\Modeler\Record;
 use Morbihanet\Modeler\Modeler;
 use Morbihanet\Modeler\Context;
 use Morbihanet\Modeler\Accessor;
@@ -142,6 +143,13 @@ if (!function_exists('redis_data')) {
         }
 
         return new $class($attributes);
+    }
+}
+
+if (!function_exists('app_config')) {
+    function app_config($context = null)
+    {
+        return Record::make(config($context));
     }
 }
 

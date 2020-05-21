@@ -5,17 +5,10 @@ use Illuminate\Support\Str;
 
 class MemoryStore extends Db
 {
-    /** @var string */
-    protected $__prefix;
-
-    /** @var array */
-    protected static $data = [];
-
-    /** @var array */
-    protected static $lc = [];
-
-    /** @var array */
-    protected static $ids = [];
+    protected ?string $__prefix = null;
+    protected static array $data = [];
+    protected static array $lc = [];
+    protected static array $ids = [];
 
     public function __construct(array $attributes = [])
     {
@@ -23,7 +16,7 @@ class MemoryStore extends Db
 
         $prefix = $this->__prefix = "dba.$class";
 
-        $db = function () use ($prefix) {
+        $this->__resolver = function () use ($prefix) {
             $ids = array_keys(static::$data[$prefix] ?? []);
 
             if (!empty($ids)) {
@@ -45,7 +38,7 @@ class MemoryStore extends Db
             $this->__model = $this->model($attributes);
         }
 
-        parent::__construct(Core::iterator($db)->setModel($this));
+        parent::__construct(Core::iterator($this->getResolver())->setModel($this));
     }
 
     /**
@@ -159,7 +152,7 @@ class MemoryStore extends Db
     public function find($id, $default = null)
     {
         if (is_array($id)) {
-            $db = function () use ($id) {
+            $this->__resolver = function () use ($id) {
                 foreach ($id as $idRow) {
                     if ($row = static::$data[$this->__prefix][$idRow] ?? null) {
                         yield $this->withSelect($this->unserialize($row));
@@ -167,7 +160,7 @@ class MemoryStore extends Db
                 }
             };
 
-            return $this->setEngine(Core::iterator($db)->setModel($this));
+            return $this->setEngine(Core::iterator($this->getResolver())->setModel($this));
         }
 
         if ($row = static::$data[$this->__prefix][$id] ?? null) {

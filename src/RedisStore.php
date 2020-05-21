@@ -14,7 +14,7 @@ class RedisStore extends Db
 
         $prefix = $this->__prefix = "dbf.$class";
 
-        $db = function () use ($prefix) {
+        $this->__resolver = function () use ($prefix) {
             $ids = Redis::hkeys($prefix);
 
             if (!empty($ids)) {
@@ -36,7 +36,7 @@ class RedisStore extends Db
             $this->__model = $this->model($attributes);
         }
 
-        parent::__construct(Core::iterator($db)->setModel($this));
+        parent::__construct(Core::iterator($this->getResolver())->setModel($this));
     }
 
     /**
@@ -145,7 +145,7 @@ class RedisStore extends Db
     public function find($id, $default = null)
     {
         if (is_array($id)) {
-            $db = function () use ($id) {
+            $this->__resolver = function () use ($id) {
                 foreach ($id as $idRow) {
                     if ($row = Redis::hget($this->__prefix, $idRow)) {
                         yield $this->withSelect($this->unserialize($row));
@@ -153,7 +153,7 @@ class RedisStore extends Db
                 }
             };
 
-            return $this->setEngine(Core::iterator($db)->setModel($this));
+            return $this->setEngine(Core::iterator($this->getResolver())->setModel($this));
         }
 
         if ($row = Redis::hget($this->__prefix, $id)) {
