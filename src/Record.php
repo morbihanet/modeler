@@ -321,7 +321,7 @@ class Record implements \IteratorAggregate, \ArrayAccess, \Countable
     /**
      * @return bool
      */
-    public function empty()
+    public function empty(): bool
     {
         return empty($this->options);
     }
@@ -334,6 +334,28 @@ class Record implements \IteratorAggregate, \ArrayAccess, \Countable
         return $this->options;
     }
 
+    public function fullArray(): array
+    {
+        $data = $this->options;
+
+        foreach ($data as $key => $value) {
+            if ($value instanceof static) {
+                $data[$key] = $value->fullArray();
+            }
+        }
+
+        return $data;
+    }
+
+    /**
+     * @param int $option
+     * @return false|string
+     */
+    public function fullJson(int $option = JSON_PRETTY_PRINT)
+    {
+        return json_encode($this->fullArray(), $option);
+    }
+
     /**
      * @param int $option
      * @return false|string
@@ -341,6 +363,14 @@ class Record implements \IteratorAggregate, \ArrayAccess, \Countable
     public function toJson(int $option = JSON_PRETTY_PRINT)
     {
         return json_encode($this->options, $option);
+    }
+
+    /**
+     * @return false|string
+     */
+    public function fullString()
+    {
+        return $this->fullJson();
     }
 
     /**

@@ -61,23 +61,57 @@ class Iterator implements IteratorAggregate
         'reject', 'some', 'sortBy', 'sortByDesc', 'sum', 'unique',
     ];
 
-    public function __construct($scope = null)
+    public function __construct($scope = [])
     {
-        if (is_callable($scope) || $scope instanceof self) {
+        if (is_callable($scope)) {
             $this->scope = $scope;
-        } elseif (is_null($scope)) {
-            $this->scope = static::empty();
         } else {
             $scope = $this->cast($scope);
 
-            $cb = function () use ($scope) {
-                foreach ($scope as $row) {
-                    yield $row;
+            $this->scope = function () use ($scope) {
+                foreach ($scope as $key => $row) {
+                    yield $key => $row;
                 }
             };
-
-            $this->scope = new static($cb);
         }
+    }
+
+    public function add($item)
+    {
+        $iterator = clone $this;
+
+        return $this->over(function () use ($item, $iterator) {
+            $key = -1;
+
+            foreach ($iterator as $key => $value) {
+                yield $key => $value;
+            }
+
+            if (Core::arrayable($item)) {
+                foreach ($item as $key => $value) {
+                    yield $key => $value;
+                }
+            } else {
+                ++$key;
+                yield $key => $item;
+            }
+        });
+    }
+
+    public function remove($id, string $key = 'id')
+    {
+        return $this->filter(function ($item) use ($id, $key) {
+            if (isset($item[$key])) {
+                return $item[$key] !== $id;
+            }
+
+            return false;
+        });
+    }
+
+    public function __invoke()
+    {
+        return $this->scope;
     }
 
     protected function cast($items)
@@ -366,7 +400,7 @@ class Iterator implements IteratorAggregate
 
         if ($this->model instanceof Db) {
             foreach ($this as $row) {
-                $this->model->model($row)->sync($item,$attributes);
+                $this->model->model($row)->sync($item, $attributes);
                 ++$i;
             }
         }
@@ -413,7 +447,7 @@ class Iterator implements IteratorAggregate
      * @param null $default
      * @return mixed|Item|null
      */
-    public function last(?callable $callback = null, $default = null): ?Item
+    public function last(?callable $callback = null, $default = null)
     {
         $array      = iterator_to_array($this->getIterator());
         $reverse    = array_reverse($array);
@@ -657,9 +691,9 @@ class Iterator implements IteratorAggregate
     /**
      * @param $criteria
      * @param null $order
-     * @return Item|null
+     * @return Item|null|mixed
      */
-    public function findOneBy($key, $value = null, $order = null): ?Item
+    public function findOneBy($key, $value = null, $order = null)
     {
         $result = $this->findBy($key, $value);
 
@@ -669,9 +703,9 @@ class Iterator implements IteratorAggregate
     /**
      * @param string $key
      * @param $value
-     * @return Item|null
+     * @return Item|null|mixed
      */
-    public function firstWhere(string $key, $value): ?Item
+    public function firstWhere(string $key, $value)
     {
         return $this->where($key, $value)->first();
     }
@@ -679,9 +713,9 @@ class Iterator implements IteratorAggregate
     /**
      * @param string $key
      * @param $value
-     * @return Item|null
+     * @return Item|null|mixed
      */
-    public function lastWhere(string $key, $value): ?Item
+    public function lastWhere(string $key, $value)
     {
         return $this->where($key, $value)->last();
     }
@@ -691,7 +725,7 @@ class Iterator implements IteratorAggregate
      * @param $value
      * @return mixed|Item|null
      */
-    public function firstBy($field, $value): ?Item
+    public function firstBy($field, $value)
     {
         return $this->findOneBy($field, $value);
     }
@@ -699,9 +733,9 @@ class Iterator implements IteratorAggregate
     /**
      * @param $field
      * @param $value
-     * @return mixed|stdClass|null
+     * @return mixed|stdClass|Item|null
      */
-    public function lastBy($field, $value): ?Item
+    public function lastBy($field, $value)
     {
         return $this->findBy($field, $value)->last();
     }
@@ -1794,7 +1828,7 @@ class Iterator implements IteratorAggregate
     /**
      * @return Db|null
      */
-    public function getModel()
+    public function getModel(): ?Db
     {
         return $this->model;
     }
@@ -1803,7 +1837,7 @@ class Iterator implements IteratorAggregate
      * @param Db|null $model
      * @return Iterator
      */
-    public function setModel(?Db $model)
+    public function setModel(?Db $model): self
     {
         $this->model = $model;
 
@@ -1823,7 +1857,12 @@ class Iterator implements IteratorAggregate
         return $results;
     }
 
-    public function morphed(string $morphClass, string $morphName): ?Item
+    /**
+     * @param string $morphClass
+     * @param string $morphName
+     * @return Item|mixed|null
+     */
+    public function morphed(string $morphClass, string $morphName)
     {
         $row = $this->where($morphName, $morphClass)->first();
 

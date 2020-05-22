@@ -6,10 +6,54 @@ use Morbihanet\Modeler\Core;
 use Morbihanet\Modeler\Config;
 use Morbihanet\Modeler\Valued;
 use Morbihanet\Modeler\Schedule;
+use Morbihanet\Modeler\Iterator;
 use Morbihanet\Modeler\Scheduler;
+use Morbihanet\Modeler\Collector;
 
 class Modeler extends TestCase
 {
+    /** @test */
+    public function it_should_be_iterable()
+    {
+        $data = [
+            ['name' => 'bar', 'value' => 'baz',],
+            ['name' => 'baz', 'value' => 'bar',],
+        ];
+
+        $iterator = new Iterator($data);
+
+        $this->assertSame($data, $iterator->toArray());
+        $this->assertSame('bar', $iterator->first()['name']);
+        $this->assertSame($iterator->last()['value'], $iterator->first()['name']);
+        $this->assertSame(2, $iterator->count());
+
+        $iterator = $iterator->add(['name' => 'foo', 'value' => 'dummy']);
+        $this->assertSame(3, $iterator->count());
+        $iterator = $iterator->remove('foo', 'name');
+        $this->assertSame(2, $iterator->count());
+    }
+
+    /** @test */
+    public function it_should_be_collectable()
+    {
+        $data = [
+            ['name' => 'bar', 'value' => 'baz',],
+            ['name' => 'baz', 'value' => 'bar',],
+        ];
+
+        $iterator = new Collector($data);
+
+        $this->assertSame($data, $iterator->toArray());
+        $this->assertSame('bar', $iterator->first()['name']);
+        $this->assertSame($iterator->last()['value'], $iterator->first()['name']);
+        $this->assertSame(2, $iterator->count());
+
+        $iterator->add(['name' => 'foo', 'value' => 'dummy']);
+        $this->assertSame(3, $iterator->count());
+        $iterator->remove('foo', 'name');
+        $this->assertSame(2, $iterator->count());
+    }
+
     /** @test */
     public function it_should_be_resolvable()
     {

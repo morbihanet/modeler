@@ -17,6 +17,13 @@ use Morbihanet\Modeler\MemoryStore;
 use Morbihanet\Modeler\Data\Session;
 use Illuminate\Support\Facades\Route;
 
+if (!function_exists('record')) {
+    function record($data)
+    {
+        return new Record((array) $data);
+    }
+}
+
 if (!function_exists('resolver')) {
     function resolver(string $name, $resolver = null): Accessor
     {
