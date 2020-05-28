@@ -2,6 +2,7 @@
 namespace Morbihanet\Modeler;
 
 use ArrayAccess;
+use Illuminate\Support\Str;
 
 class Model extends Modeler implements ArrayAccess
 {
@@ -159,6 +160,14 @@ class Model extends Modeler implements ArrayAccess
         Event::fire('model:' . get_called_class() . ':' . $name, $this);
 
         $uncamelized = Core::uncamelize($name);
+
+        $methodModeler = Str::camel('scope_' . Core::uncamelize($name));
+
+        if (in_array($methodModeler, get_class_methods($this))) {
+            $args = array_merge([static::getDb()], $arguments);
+
+            return (new static)->{$methodModeler}(...$args);
+        }
 
         if (
             $this->item instanceof Item && (

@@ -76,7 +76,34 @@ class Iterator implements IteratorAggregate
         }
     }
 
-    public function add($item)
+    public function append($item): self
+    {
+        return $this->add($item);
+    }
+
+    public function prepend($item): self
+    {
+        $iterator = clone $this;
+
+        return $this->over(function () use ($item, $iterator) {
+            $key = -1;
+
+            if ($item instanceof static) {
+                foreach ($item as $key => $value) {
+                    yield $key => $value;
+                }
+            } else {
+                ++$key;
+                yield $key => $item;
+            }
+
+            foreach ($iterator as $key => $value) {
+                yield $key => $value;
+            }
+        });
+    }
+
+    public function add($item): self
     {
         $iterator = clone $this;
 
@@ -87,7 +114,7 @@ class Iterator implements IteratorAggregate
                 yield $key => $value;
             }
 
-            if (Core::arrayable($item)) {
+            if ($item instanceof static) {
                 foreach ($item as $key => $value) {
                     yield $key => $value;
                 }
@@ -101,8 +128,12 @@ class Iterator implements IteratorAggregate
     public function remove($id, string $key = 'id')
     {
         return $this->filter(function ($item) use ($id, $key) {
-            if (isset($item[$key])) {
-                return $item[$key] !== $id;
+            if ($id instanceof Item && $item instanceof Item) {
+                return $id->toArray() !== $item->toArray();
+            } else {
+                if (isset($item[$key])) {
+                    return $item[$key] !== $id;
+                }
             }
 
             return false;
@@ -645,21 +676,47 @@ class Iterator implements IteratorAggregate
         });
     }
 
+    public function intersect($items)
+    {
+        return $this->exec('intersect', func_get_args());
+    }
+
+    public function pad($size, $value)
+    {
+        if ($size < 0) {
+            return $this->exec('pad', func_get_args());
+        }
+
+        return $this->over(function () use ($size, $value) {
+            $yielded = 0;
+
+            foreach ($this as $index => $item) {
+                yield $index => $item;
+
+                ++$yielded;
+            }
+
+            while (++$yielded < $size) {
+                yield $value;
+            }
+        });
+    }
+
     /**
      * @param Closure $callback
      * @return Iterator
      */
     public function over(Closure $callback): self
     {
-        return (new self($callback->bindTo($this)))->setModel($this->getModel());
+        return (new static($callback->bindTo($this)))->setModel($this->getModel());
     }
 
     /**
      * @param $value
      * @param string $key
-     * @return item|null
+     * @return Item|mixed|null
      */
-    public function find($value, string $key = 'id'): ?item
+    public function find($value, string $key = 'id')
     {
         return $this->where($key, $value)->first();
     }
@@ -1615,6 +1672,32 @@ class Iterator implements IteratorAggregate
         });
     }
 
+    public function flip(): self
+    {
+        return $this->over(function () {
+            foreach ($this as $key => $value) {
+                yield $value => $key;
+            }
+        });
+    }
+
+    public function flatten($depth = INF)
+    {
+        $instance = $this->over(function () use ($depth) {
+            foreach ($this as $item) {
+                if (!is_array($item) && !$item instanceof Enumerable) {
+                    yield $item;
+                } elseif ($depth === 1) {
+                    yield from $item;
+                } else {
+                    yield from $this->over($item)->flatten($depth - 1);
+                }
+            }
+        });
+
+        return $instance->values();
+    }
+
     public function insert(array $values): bool
     {
         $model = $this->getModel();
@@ -1723,7 +1806,7 @@ class Iterator implements IteratorAggregate
      * @param array $arguments
      * @return Iterator|mixed
      */
-    public function __call(string $name, array $arguments)
+    public function __call($name, $arguments)
     {
         $model = $this->getModel();
         $modelActions = ['save', 'delete'];
@@ -1736,6 +1819,22 @@ class Iterator implements IteratorAggregate
 
         if (self::hasMacro($name)) {
             return $this->macroCall($name, $arguments);
+        }
+
+        if ($modeler = Core::get('modeler')) {
+            if (in_array($name, get_class_methods($modeler))) {
+                $args = array_merge([$this], $arguments);
+
+                return (new $modeler)->{$name}(...$args);
+            }
+
+            $methodModeler = Str::camel('scope_' . Core::uncamelize($name));
+
+            if (in_array($methodModeler, get_class_methods($modeler))) {
+                $args = array_merge([$this], $arguments);
+
+                return (new $modeler)->{$methodModeler}(...$args);
+            }
         }
 
         if (fnmatch('where*', $name) && strlen($name) > 5) {
@@ -1805,6 +1904,41 @@ class Iterator implements IteratorAggregate
         });
     }
 
+    public function diff($items): self
+    {
+        return $this->exec('diff', func_get_args());
+    }
+
+    public function crossJoin(...$arrays): self
+    {
+        return $this->exec('crossJoin', func_get_args());
+    }
+
+    public function groupBy(string $groupBy, bool $preserveKeys = false): self
+    {
+        return $this->exec('groupBy', func_get_args());
+    }
+
+    public function union($items): self
+    {
+        return $this->exec('union', func_get_args());
+    }
+
+    public function nth(int $step, int $offset = 0): self
+    {
+        return $this->over(function () use ($step, $offset) {
+            $position = 0;
+
+            foreach ($this as $item) {
+                if ($position % $step === $offset) {
+                    yield $item;
+                }
+
+                ++$position;
+            }
+        });
+    }
+
     /**
      * @param $method
      * @param array $params
@@ -1814,7 +1948,7 @@ class Iterator implements IteratorAggregate
     {
         $results = $this->collect()->$method(...$params);
 
-        if ($results instanceof Collection || $results instanceof LazyCollection || $results instanceof self) {
+        if ($results instanceof Collection || $results instanceof LazyCollection || $results instanceof static) {
             return $this->over(function () use ($results) {
                 foreach ($results as $k => $result) {
                     yield $k => $result;

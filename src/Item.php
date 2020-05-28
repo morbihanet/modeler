@@ -244,6 +244,11 @@ class Item extends Record
         return $this->fill($data)->save();
     }
 
+    public function getDatum(): Modeler
+    {
+        return datum(item_table($this));
+    }
+
     /**
      * @param array $data
      * @return Item
@@ -345,14 +350,14 @@ class Item extends Record
      * @param array $arguments
      * @return mixed
      */
-    public function __call(string $name, array $arguments)
+    public function __call($name, $arguments)
     {
         Event::fire('item:'.get_called_class().':' . $name, $this);
 
         if (in_array($name, get_class_methods($modeler = $this->modeler()))) {
-            $arguments[] = $this;
+            $args = array_merge([$this], $arguments);
 
-            return $modeler->{$name}(...$arguments);
+            return $modeler->{$name}(...$args);
         }
 
         $values = $this->toArray();
@@ -455,7 +460,7 @@ class Item extends Record
      */
     public function getDb(): ?Db
     {
-        return $this->db;
+        return $this->db ?? Core::getDb($this);
     }
 
     public function __sleep()

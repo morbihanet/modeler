@@ -17,6 +17,7 @@ use Illuminate\Mail\Message;
 use Illuminate\Mail\Markdown;
 use Illuminate\Support\Carbon;
 use Faker\Provider\fr_FR\Company;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Container\Container;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Mail;
@@ -34,6 +35,7 @@ class Core
 {
     protected static array $data = [];
     protected static ?Generator $faker;
+    protected static bool $booted = false;
 
     /** @var string */
     const EMAIL_REGEX_LOCAL = '(?!(?:(?:\\x22?\\x5C[\\x00-\\x7E]\\x22?)|(?:\\x22?[^\\x5C\\x22]\\x22?)){255,})(?!(?:(?:\\x22?\\x5C[\\x00-\\x7E]\\x22?)|(?:\\x22?[^\\x5C\\x22]\\x22?)){65,}@)(?:(?:[\\x21\\x23-\\x27\\x2A\\x2B\\x2D\\x2F-\\x39\\x3D\\x3F\\x5E-\\x7E]+)|(?:\\x22(?:[\\x01-\\x08\\x0B\\x0C\\x0E-\\x1F\\x21\\x23-\\x5B\\x5D-\\x7F]|(?:\\x5C[\\x00-\\x7F]))*\\x22))(?:\\.(?:(?:[\\x21\\x23-\\x27\\x2A\\x2B\\x2D\\x2F-\\x39\\x3D\\x3F\\x5E-\\x7E]+)|(?:\\x22(?:[\\x01-\\x08\\x0B\\x0C\\x0E-\\x1F\\x21\\x23-\\x5B\\x5D-\\x7F]|(?:\\x5C[\\x00-\\x7F]))*\\x22)))*';
@@ -450,7 +452,24 @@ class Core
         return static::set('store', $iterator);
     }
 
-    public static function app(?Container $app = null): ?Container
+    public static function boot()
+    {
+        if (false === static::$booted) {
+            static::$booted = true;
+
+            if (!headers_sent()) {
+                static::bearer();
+            }
+
+            JsonResponse::macro('data', function () {
+                return $this->getData(true);
+            });
+
+            Event::fire('core.boot');
+        }
+    }
+
+    public static function app($app = null): ?Container
     {
         if (is_object($app)) {
             static::$app = $app;
@@ -1150,6 +1169,11 @@ class Core
         return Modeler::factorModel($name);
     }
 
+    public static function str()
+    {
+        return new Str;
+    }
+
     public static function config()
     {
         return Config::getInstance();
@@ -1232,11 +1256,13 @@ class Core
     }
 
     /**
-     * @param string $name
+     * @param null|string $name
      * @return string
      */
-    public static function bearer(string $name = 'app_bearer'): string
+    public static function bearer(?string $name = null): string
     {
+        $name = $name ?? config('modeler.cookie_name', 'app_bearer');
+
         if (!$cookie = Arr::get($_COOKIE, $name)) {
             $cookie = sha1(uniqid(sha1(uniqid(null, true)), true));
         }
@@ -1564,7 +1590,7 @@ value="'.static::getToken().'"
         return DbMaster::statement($sql, $bindings);
     }
 
-    public static function upload(string $field, string $name = 'file', ?string $directory = null)
+    public static function upload(string $field, string $name = 'file', ?string $directory = null): bool
     {
         $request = request();
         $directory = $directory ?? storage_path();
@@ -1580,5 +1606,20 @@ value="'.static::getToken().'"
                 return false;
             }
         }
+
+        return false;
+    }
+
+    public static function fullArray($concern)
+    {
+        $concern = static::arrayable($concern) ? $concern->toArray() : $concern;
+
+        foreach ((array) $concern as $key => $value) {
+            if (static::arrayable($value)) {
+                $concern[$key] = static::fullArray($value);
+            }
+        }
+
+        return $concern;
     }
 }

@@ -18,6 +18,7 @@ abstract class TestCase extends Orchestra
     {
         parent::setUp();
 
+        Core::boot();
         Core::app($this->app);
 
         $this->setUpDatabase();

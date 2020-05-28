@@ -17,19 +17,12 @@ class Session extends Store implements
     ArrayAccess,
     Countable,
     IteratorAggregate {
-    /** @var string */
-    protected $namespace;
+    protected ?string $namespace = null;
+    protected ?string $userKey = null;
+    protected ?string $userModel = null;
+    protected string $localeKey = '_locale';
 
-    /** @var string */
-    protected $userKey;
-
-    /** @var string */
-    protected $userModel;
-
-    /** @var string */
-    protected $localeKey = '_locale';
-
-    protected $onces = null;
+    protected ?array $onces = null;
     protected $store = [];
 
     protected static array $instances = [];

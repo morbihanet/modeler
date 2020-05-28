@@ -1,6 +1,8 @@
 <?php
 namespace Morbihanet\Modeler;
 
+use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Artisan;
@@ -9,6 +11,7 @@ class ModelerServiceProvider extends ServiceProvider
 {
     public function boot()
     {
+        Core::boot();
         Core::app($this->app);
 
         $this->registerMigrations();
@@ -19,6 +22,12 @@ class ModelerServiceProvider extends ServiceProvider
             $done = Scheduler::run();
 
             return response()->json(['status' => 'OK', 'done' => $done]);
+        });
+
+        Route::post(config('modeler.api_route', '/xapi'), function (Request $request): JsonResponse {
+            set_time_limit(0);
+
+            return Api::call($request);
         });
 
         Artisan::command('modeler:scheduler', function () {

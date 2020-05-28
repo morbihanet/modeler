@@ -2,14 +2,19 @@
 namespace Morbihanet\Modeler;
 
 use Illuminate\Support\Collection;
+use Illuminate\Support\Traits\Macroable;
 
 class Collector
 {
+    use Macroable {
+        Macroable::__call as macroCall;
+    }
+
     protected ?Collection $collection = null;
 
     public function __construct($items = null)
     {
-        $this->collection = collect();
+        $this->collection = Collection::make();
 
         foreach ($items as $item) {
             $this->add($item);
@@ -38,8 +43,23 @@ class Collector
         return $count < $this->collection->count();
     }
 
-    public function __call(string $name, array $arguments)
+    /**
+     * @return mixed|null
+     */
+    public function find($id, string $key = 'id')
     {
+        return $this->collection->where($key, $id)->first();
+    }
+
+    /**
+     * @return mixed|Collector
+     */
+    public function __call($name, $arguments)
+    {
+        if (static::hasMacro($name)) {
+            return $this->macroCall($name, $arguments);
+        }
+
         $value = $this->collection->{$name}(...$arguments);
 
         if ($value instanceof Collection) {

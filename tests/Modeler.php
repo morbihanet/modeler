@@ -1,17 +1,111 @@
 <?php
 namespace Morbihanet\Modeler\Test;
 
+use Morbihanet\Modeler\Api;
 use Morbihanet\Modeler\Swap;
 use Morbihanet\Modeler\Core;
+use Morbihanet\Modeler\Able;
+use Morbihanet\Modeler\Event;
 use Morbihanet\Modeler\Config;
 use Morbihanet\Modeler\Valued;
+use Morbihanet\Modeler\Bucket;
 use Morbihanet\Modeler\Schedule;
 use Morbihanet\Modeler\Iterator;
 use Morbihanet\Modeler\Scheduler;
 use Morbihanet\Modeler\Collector;
+use Illuminate\Http\JsonResponse;
 
 class Modeler extends TestCase
 {
+    /** @test */
+    public function it_should_be_apiable()
+    {
+        request()->setMethod('POST');
+
+        /** @var JsonResponse $response */
+        $response = Api::test();
+
+        $this->assertSame(['message' => 'An error occured'], $response->data());
+
+        Api::build(['test' => function () {
+            return Api::response(['message' => 'foo']);
+        }]);
+
+        /** @var JsonResponse $response */
+        $response = Api::test();
+
+        $this->assertSame(['message' => 'foo'], $response->data());
+
+        Api::events(['test' => function () {
+            return Api::response(['message' => 'bar']);
+        }]);
+
+        /** @var JsonResponse $response */
+        $response = Api::test();
+
+        $this->assertSame(['message' => 'bar'], $response->data());
+    }
+
+    /** @test */
+    public function it_should_be_eventable()
+    {
+        $this->assertSame(40, Event::try('dummy', 5, 8, function (int $a, int $b): int {
+            return $a * $b;
+        }));
+
+        Event::add('dummy', function (int $a, int $b): int {
+            return $a + $b;
+        });
+
+        $this->assertSame(13, Event::try('dummy', 5, 8, function (int $a, int $b): int {
+            return $a * $b;
+        }));
+
+        $this->assertNull(Event::hook('hook'));
+
+        Event::add('hook', function () {
+            return true;
+        });
+
+        $this->assertTrue(Event::hook('hook'));
+    }
+
+    /** @test */
+    public function it_should_be_modelable()
+    {
+        $this->assertSame(0, Product::count());
+
+        Product::create(['name' => 'bar']);
+
+        $this->assertSame(1, Product::count());
+        $this->assertSame(1, Product::test('bar')->count());
+        $this->assertSame(6, Product::first()->dummy(5));
+    }
+
+    /** @test */
+    public function it_should_be_facable()
+    {
+        $this->assertSame('FOO', Resolver::upper('foo'));
+        $this->assertSame('BAR', Str::upper('bar'));
+        $this->assertSame('foo', Resolver::lower('FOO'));
+        $this->assertSame('bar', Str::lower('BAR'));
+    }
+
+    /** @test */
+    public function it_should_be_able()
+    {
+        $one    = datum('tv')->create(['name' => 'foo']);
+        $two    = datum('tv')->create(['name' => 'bar']);
+        $three  = datum('computer')->create(['name' => 'baz']);
+
+        Able::add($one,     'image', ['image' => 'foo.jpg']);
+        Able::add($two,     'image', ['image' => 'bar.jpg']);
+        Able::add($three,   'image', ['image' => 'baz.jpg']);
+
+        $this->assertSame(3, Able::fetch('image')->count());
+        $this->assertSame(2, Able::where('class_model', 'tv')->count());
+    }
+
     /** @test */
     public function it_should_be_iterable()
     {

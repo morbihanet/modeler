@@ -16,6 +16,11 @@ class Event
         Core::set('core.events', $events);
     }
 
+    public static function listen(string $name, callable $callable): void
+    {
+        static::add($name, $callable);
+    }
+
     public static function off(string $name): void
     {
         if (static::has($name) && !isset(static::$cancelled[$name])) {
@@ -51,12 +56,40 @@ class Event
         return false;
     }
 
+    public static function in(string $class, array $methods)
+    {
+        foreach ($methods as $event => $callable) {
+            static::add($class . '.' . $event, $callable);
+        }
+    }
+
+    public static function try(string $name, ...$params)
+    {
+        $otherwise = array_pop($params);
+
+        if (is_callable($otherwise)) {
+            if ($callable = static::getCallable($name)) {
+                return $callable(...$params);
+            }
+
+            return $otherwise(...$params);
+        }
+
+        return null;
+    }
+
+    public static function hook(string $name, ...$params)
+    {
+        if ($callable = static::getCallable($name)) {
+            return $callable(...$params);
+        }
+
+        return null;
+    }
+
     public static function fire(string $name, $concern = null, bool $return = false)
     {
-        $events = Core::get('core.events', []);
-        $callable = $events[$name] ?? null;
-
-        if (is_callable($callable) && !isset(static::$cancelled[$name])) {
+        if ($callable = static::getCallable($name)) {
             $result = $callable($concern);
 
             if (true === $return) {
@@ -65,5 +98,18 @@ class Event
         }
 
         return $concern;
+    }
+
+    protected static function getCallable(string $name): ?callable
+    {
+        if (!isset(static::$cancelled[$name])) {
+            $events = Core::get('core.events', []);
+
+            $callable = $events[$name] ?? null;
+
+            return is_callable($callable) ? $callable : null;
+        }
+
+        return null;
     }
 }

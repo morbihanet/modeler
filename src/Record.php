@@ -264,14 +264,9 @@ class Record implements \IteratorAggregate, \ArrayAccess, \Countable
         return $default;
     }
 
-    /**
-     * @param $name
-     * @param $arguments
-     * @return mixed
-     */
-    public function __call(string $name, array $arguments)
+    public function __call($name, $arguments)
     {
-        if (self::hasMacro($name)) {
+        if (static::hasMacro($name)) {
             return $this->macroCall($name, $arguments);
         }
 

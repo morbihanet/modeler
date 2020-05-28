@@ -1,6 +1,7 @@
 <?php
 namespace Morbihanet\Modeler;
 
+use Exception;
 use Illuminate\Support\Str;
 
 class Swap
@@ -48,8 +49,8 @@ class Swap
         $closure = function () use ($instance, $method, $parameters) {
             try {
                 return Core::bind($instance)->{$method}(...$parameters);
-            } catch (\Exception $e) {
-                return Core::bind($instance)->{$method};
+            } catch (Exception $e) {
+                return $instance->{$method} ?? null;
             }
         };
 
@@ -82,22 +83,33 @@ class Swap
      * @param $callback
      * @return bool
      */
-    public static function define(string $interaction, $callback)
+    public static function define(string $interaction, $callback): bool
     {
         return static::swap($interaction, $callback);
     }
 
-    /**
-     * @param string $interaction
-     * @param $callback
-     * @return bool
-     */
-    public static function swap(string $interaction, $callback)
+    public static function in(string $class, array $methods)
+    {
+        foreach ($methods as $method => $swap) {
+            static::apply($class . '@' . $method, $swap);
+        }
+    }
+
+    public static function apply(string $interaction, $callback): bool
+    {
+        if (!$status = isset(static::$interactions[$interaction])) {
+            static::$interactions[$interaction] = $callback;
+        }
+
+        return !$status;
+    }
+
+    public static function swap(string $interaction, $callback): bool
     {
         $status = isset(static::$interactions[$interaction]);
 
         static::$interactions[$interaction] = $callback;
 
-        return $status === false;
+        return !$status;
     }
 }

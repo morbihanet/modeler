@@ -3,6 +3,7 @@
 use Illuminate\Support\Str;
 use Morbihanet\Modeler\Item;
 use Illuminate\Http\Request;
+use Morbihanet\Modeler\Core;
 use Morbihanet\Modeler\Store;
 use Morbihanet\Modeler\Model;
 use Morbihanet\Modeler\Valued;
@@ -198,6 +199,27 @@ if (!function_exists('datum')) {
         }
 
         return $object;
+    }
+
+    function item_table(Item $item)
+    {
+        return Str::lower(Core::uncamelize(class_basename($item)));
+    }
+
+    function get_datum(string $class)
+    {
+        if (!class_exists($class)) {
+            $parts = explode('\\', $class);
+            $last = Core::uncamelize(array_pop($parts));
+
+            if ($class === get_class($db = datum($last))) {
+                return $db;
+            }
+
+            return null;
+        }
+
+        return new $class;
     }
 }
 
