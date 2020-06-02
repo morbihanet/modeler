@@ -6,6 +6,8 @@ use Morbihanet\Modeler\Core;
 use Morbihanet\Modeler\Redis;
 use Morbihanet\Modeler\Store;
 use Morbihanet\Modeler\FileStore;
+use Jenssegers\Mongodb\Connection;
+use Morbihanet\Modeler\MongoHouse;
 use Morbihanet\Modeler\MemoryStore;
 use Morbihanet\Modeler\MailManager;
 use Illuminate\Database\Schema\Blueprint;
@@ -91,9 +93,24 @@ abstract class TestCase extends Orchestra
             'prefix'    => '',
         ]);
 
+        $mongocnf = [
+            'driver' => 'mongodb',
+            'host' => env('MONGO_HOST', '127.0.0.1'),
+            'port' => env('MONGO_PORT', 27017),
+            'database' => env('DB_DATABASE', 'morbihanet'),
+            'username' => env('MONGO_USER', 'root'),
+            'password' => env('MONGO_PASSWORD', ''),
+            'options' => [
+                'database' => env('DB_AUTHENTICATION_DATABASE', 'admin'),
+            ],
+        ];
+
+        $app['config']->set('database.connections.mongodb', $mongocnf);
+
         $app['config']->set('modeler', [
             'data_class' => 'App\\Data',
             'datum_class' => 'App\\Datum\\Models',
+            'doc_class' => 'App\\Doc\\Models',
             'model_class' => 'App\\Repositories',
             'item_class' => 'App\\Entities',
             'cache_ttl' => 24 * 3600,
@@ -124,6 +141,12 @@ abstract class TestCase extends Orchestra
             $table->unsignedInteger('reserved_at')->nullable();
             $table->unsignedInteger('available_at');
             $table->unsignedInteger('created_at');
+        });
+
+        $this->app['db']->extend('mongodb', function ($config, $name) {
+            $config['name'] = $name;
+
+            return new Connection($config);
         });
     }
 }

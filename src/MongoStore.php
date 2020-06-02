@@ -1,22 +1,26 @@
 <?php
 namespace Morbihanet\Modeler;
 
+use Exception;
 use Illuminate\Support\Str;
+use MongoDB\Driver\ReadConcern;
+use MongoDB\Driver\WriteConcern;
+use MongoDB\Driver\ReadPreference;
 use Illuminate\Database\Eloquent\Builder;
 
-class Store extends Db
+class MongoStore extends Db
 {
-    /** @var Warehouse */
+    /** @var MongoHouse */
     protected $__store;
 
     public function __construct($attributes = [])
     {
         $class = str_replace('\\', '.', Str::lower(get_called_class()));
 
-        $suffix = "dbs.$class";
+        $suffix = "ms.$class";
 
         /** @var Builder $store */
-        $this->__store = $store = (new Warehouse)->setNamespace($suffix);
+        $this->__store = $store = (new MongoHouse)->setNamespace($suffix);
 
         /** @var Modeler $modeler */
         $modeler = Core::get('modeler');
@@ -28,7 +32,7 @@ class Store extends Db
         $this->__resolver = function () use ($store) {
             $rows = $store->select('v')->where('k', 'like', $store->getNamespace() . '.row.%')->cursor();
 
-            /** @var \Illuminate\Database\Eloquent\Model $row */
+            /** @var MongoModel $row */
             foreach ($rows as $row) {
                 yield unserialize($row->getAttribute('v'));
             }
@@ -57,7 +61,27 @@ class Store extends Db
      */
     public function transaction(\Closure $callback, $attempts = 1)
     {
-        return $this->__store->getConnection()->transaction($callback, $attempts);
+        for ($currentAttempt = 1; $currentAttempt <= $attempts; $currentAttempt++) {
+            $this->beginTransaction();
+
+            try {
+                $callbackResult = $callback($this);
+            } catch (Exception $e) {
+                $this->rollBack();
+
+                throw $e;
+            }
+
+            try {
+                $this->commit();
+            } catch (Exception $e) {
+                $this->rollBack();
+
+                throw $e;
+            }
+
+            return $callbackResult;
+        }
     }
 
     /**
@@ -65,7 +89,17 @@ class Store extends Db
      */
     public function beginTransaction()
     {
-        return $this->getPdo()->beginTransaction();
+        try {
+            Core::getMongoSession()->startTransaction([
+                'readConcern' => new ReadConcern(ReadConcern::LOCAL),
+                'writeConcern' => new WriteConcern(WriteConcern::MAJORITY, 1000),
+                'readPreference' => new ReadPreference(ReadPreference::RP_PRIMARY),
+            ]);
+
+            return true;
+        } catch (Exception $e) {
+            return false;
+        }
     }
 
     /**
@@ -73,7 +107,13 @@ class Store extends Db
      */
     public function commit()
     {
-        return $this->getPdo()->commit();
+        try {
+            Core::getMongoSession()->commitTransaction();
+
+            return true;
+        } catch (Exception $e) {
+            return false;
+        }
     }
 
     /**
@@ -81,7 +121,13 @@ class Store extends Db
      */
     public function rollback()
     {
-        return $this->getPdo()->rollback();
+        try {
+            Core::getMongoSession()->abortTransaction();
+
+            return true;
+        } catch (Exception $e) {
+            return false;
+        }
     }
 
     /**

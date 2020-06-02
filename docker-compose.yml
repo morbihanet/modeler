@@ -6,10 +6,11 @@ services:
             - .:/var/www
             - ../:/home/app
         ports:
-            - "8282:80"
+            - 8282:80
         links:
             - mysql
             - redis
+            - mongodb
         environment:
             - DB_HOST=mysql
             - DB_USERNAME=morbihanet
@@ -28,6 +29,10 @@ services:
             - QUEUE_CONNECTION=redis
             - QUEUE_NAME=default
             - REDIS_PASSWORD=null
+            - MONGO_HOST=mongodb
+            - MONGO_PORT=27017
+            - MONGO_USER=root
+            - MONGO_PASSWORD=morbihanet
             - REDIS_PORT=6379
             - PROXY_SCHEME=https
 
@@ -53,12 +58,23 @@ services:
             PMA_HOST: mysql
             PMA_PORT: 3306
         ports:
-            - '8283:80'
+            - 8283:80
+
+    mongodb:
+        image: mongo
+        restart: always
+        environment:
+            - MONGO_INITDB_ROOT_USERNAME=root
+            - MONGO_INITDB_ROOT_PASSWORD=morbihanet
+        ports:
+            - 8217:27017
+        volumes:
+            - ~/data/morbihanet/mongodb:/data/db
 
     redis:
         image: redislabs/redisearch:latest
         command: redis-server --appendonly yes --loadmodule /usr/lib/redis/modules/redisearch.so
         ports:
-            - "1793:6379"
+            - 1793:6379
         volumes:
             - ~/data/morbihanet/redis:/data

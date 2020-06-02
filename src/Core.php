@@ -7,17 +7,20 @@ use Mockery;
 use Exception;
 use Swift_Mailer;
 use Faker\Factory;
+use MongoDB\Client;
 use ReflectionClass;
 use Faker\Generator;
 use ReflectionFunction;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use BadMethodCallException;
+use MongoDB\Driver\Manager;
 use Illuminate\Mail\Message;
 use Illuminate\Mail\Markdown;
 use Illuminate\Support\Carbon;
 use Faker\Provider\fr_FR\Company;
 use Illuminate\Http\JsonResponse;
+use Jenssegers\Mongodb\Connection;
 use Illuminate\Container\Container;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Mail;
@@ -145,6 +148,11 @@ class Core
     public static function di(): Di
     {
         return Di::getInstance();
+    }
+
+    public static function db()
+    {
+        return static::app()['db'];
     }
 
     /**
@@ -1621,5 +1629,63 @@ value="'.static::getToken().'"
         }
 
         return $concern;
+    }
+
+    public static function mongo()
+    {
+        if (!$mongo = static::get('core_mongo')) {
+            $host = env('MONGO_HOST', 'localhost');
+            $port = env('MONGO_PORT', 27017);
+            $username = env('MONGO_USER', 'root');
+            $password = env('MONGO_PASSWORD', '');
+            $connect = true;
+
+            $mongo = new Manager("mongodb://$host:$port", compact('username', 'password', 'connect'));
+
+            static::set('core_mongo', $mongo);
+        }
+
+        return $mongo;
+    }
+
+    public static function getMongoClient(array $options = [])
+    {
+        $config = config('database.connections.mongodb', []);
+        $options = array_merge(Arr::get($config, 'options', []), $options);
+
+        $hosts = is_array($config['host']) ? $config['host'] : [$config['host']];
+
+        foreach ($hosts as &$host) {
+            if (strpos($host, ':') === false && !empty($config['port'])) {
+                $host = $host . ':' . $config['port'];
+            }
+        }
+
+        $auth_database = isset($config['options']) && !empty($config['options']['database'])
+            ? $config['options']['database']
+            : null;
+
+        $dsn = 'mongodb://' . implode(',', $hosts) . ($auth_database ? '/' . $auth_database : '');
+
+        $driverOptions = [];
+
+        if (isset($config['driver_options']) && is_array($config['driver_options'])) {
+            $driverOptions = $config['driver_options'];
+        }
+
+        if (!isset($options['username']) && !empty($config['username'])) {
+            $options['username'] = $config['username'];
+        }
+
+        if (!isset($options['password']) && !empty($config['password'])) {
+            $options['password'] = $config['password'];
+        }
+
+        return new Client($dsn, $options, $driverOptions);
+    }
+
+    public static function getMongoSession()
+    {
+        return static::mongo()->startSession();
     }
 }

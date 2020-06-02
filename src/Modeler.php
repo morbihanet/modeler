@@ -178,7 +178,14 @@ class Modeler
 
     protected static function boot()
     {
-        //
+        Core::set('modeler_store', static::$store);
+        $class = get_called_class();
+//
+        if (static::$store === MongoStore::class && !is_mongo($class) && !is_booting($class)) {
+            is_booting($class, true);
+            $mapped = Str::lower(class_basename($class));
+            is_mongo($class, $mapped);
+        }
     }
 
     /**
@@ -189,6 +196,14 @@ class Modeler
         self::$connection = $connection;
     }
 
+    /**
+     * @return string
+     */
+    public static function getStore(): string
+    {
+        return self::$store;
+    }
+
     public function __get(string $key)
     {
         if ($item = Core::get('item_record')) {
@@ -196,6 +211,11 @@ class Modeler
         }
 
         return null;
+    }
+
+    public function isMongo(): ?string
+    {
+        return is_mongo(get_called_class());
     }
 
     public static function __callStatic(string $name, array $arguments)
@@ -365,7 +385,7 @@ class Modeler
     {
         $model = ucfirst(Str::camel(str_replace('.', '\\_', $model)));
         $namespace = config('modeler.model_class', 'DB\\Models');
-
+//
         $class = $namespace . '\\' . $model;
 
         if (!class_exists($class)) {
@@ -381,6 +401,8 @@ class Modeler
                 $code .= 'class ' . $model . ' extends \\Morbihanet\\Modeler\\FileStore {}';
             } else if (static::$store === LiteStore::class) {
                 $code .= 'class ' . $model . ' extends \\Morbihanet\\Modeler\\LiteStore {}';
+            } else if (static::$store === MongoStore::class) {
+                $code .= 'class ' . $model . ' extends \\Morbihanet\\Modeler\\MongoStore {}';
             }
 
             eval($code);

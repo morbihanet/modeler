@@ -43,6 +43,8 @@ RUN docker-php-ext-configure gd --with-jpeg=/usr/include/ --with-freetype=/usr/i
 RUN docker-php-ext-install -j$(nproc) gd
 
 RUN pecl install apcu && docker-php-ext-enable apcu
+RUN apt-get update && apt-get install --no-install-recommends -y libcurl4-openssl-dev pkg-config libssl-dev
+RUN pecl install mongodb && docker-php-ext-enable mongodb
 
 # Enable apache modules
 RUN a2enmod rewrite headers proxy

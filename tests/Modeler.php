@@ -8,15 +8,29 @@ use Morbihanet\Modeler\Able;
 use Morbihanet\Modeler\Event;
 use Morbihanet\Modeler\Config;
 use Morbihanet\Modeler\Valued;
-use Morbihanet\Modeler\Bucket;
 use Morbihanet\Modeler\Schedule;
 use Morbihanet\Modeler\Iterator;
 use Morbihanet\Modeler\Scheduler;
 use Morbihanet\Modeler\Collector;
 use Illuminate\Http\JsonResponse;
+use Morbihanet\Modeler\MongoHouse;
 
 class Modeler extends TestCase
 {
+    /** @test */
+    public function it_should_be_mongoable()
+    {
+        MongoHouse::truncate();
+        $this->assertSame(0, MongoBook::count());
+        MongoBook::create(['name' => 'foo', 'bar' => 'baz']);
+        $this->assertSame(1, MongoBook::count());
+
+        $db = doc('book');
+        $db::create(['title' => 'Les Fleurs du Mal', 'year' => 1867]);
+        $this->assertEquals(1, $db::count());
+        $this->assertTrue($db::exists());
+    }
+
     /** @test */
     public function it_should_be_apiable()
     {
@@ -706,6 +720,32 @@ class Modeler extends TestCase
     }
 
     /** @test */
+    public function it_should_calculate_by_doc()
+    {
+        MongoHouse::truncate();
+
+        $hugo = doc('author')::create(['name' => 'Victor Hugo']);
+        $baudelaire = doc('author')::create(['name' => 'Charles Baudelaire']);
+
+        $ndp = doc('book')::create(['title' => 'Notre Dame de Paris', 'year' => 1831, 'author_id' => $hugo->id]);
+        doc('book')::create(['title' => 'Les Contemplations', 'year' => 1855, 'author_id' => $hugo->id]);
+        doc('book')::create(['title' => 'Les Fleurs du Mal', 'year' => 1867, 'author_id' => $baudelaire->id]);
+
+        $this->assertEquals(3, doc('author')::sum('id'));
+        $this->assertEquals(1.5, doc('author')::avg('id'));
+        $this->assertEquals(6, doc('book')::sum('id'));
+        $this->assertEquals(2, doc('book')::avg('id'));
+
+        $this->assertEquals(1, doc('author')::min('id'));
+        $this->assertEquals(2, doc('author')::max('id'));
+        $this->assertEquals(1, doc('book')::min('id'));
+        $this->assertEquals(3, doc('book')::max('id'));
+
+        $this->assertEquals(3, $hugo->books->sum('id'));
+        $this->assertEquals(3, $baudelaire->books->sum('id'));
+    }
+
+    /** @test */
     public function it_should_calculate()
     {
         $hugo = Author::create(['name' => 'Victor Hugo']);
@@ -842,6 +882,23 @@ class Modeler extends TestCase
     }
 
     /** @test */
+    public function it_should_be_groupable_by_doc()
+    {
+        MongoHouse::truncate();
+
+        $hugo = doc('author', null, ['name' => 'Victor Hugo'])->save();
+        $baudelaire = doc('author', null, ['name' => 'Charles Baudelaire'])->save();
+
+        doc('book', null, ['title' => 'Notre Dame de Paris', 'year' => 1831, 'author_id' => $hugo->id])->save();
+        doc('book', null, ['title' => 'Les Contemplations', 'year' => 1855, 'author_id' => $hugo->id])->save();
+        doc('book', null, ['title' => 'Les Fleurs du Mal', 'year' => 1867, 'author_id' => $baudelaire->id])
+            ->save();
+
+        $group = doc('book')->groupBy('author_id');
+        $this->assertEquals(2, $group->count());
+    }
+
+    /** @test */
     public function it_should_be_groupable_by_model()
     {
         $hugo = datum('author', 'test', ['name' => 'Victor Hugo'])->save();
@@ -910,6 +967,25 @@ class Modeler extends TestCase
 
         $group = FileBook::groupBy('file_author_id');
         $this->assertEquals(2, $group->count());
+    }
+
+    /** @test */
+    public function it_should_be_sortable_by_doc()
+    {
+        MongoHouse::truncate();
+
+        $hugo = doc('author')::create(['name' => 'Victor Hugo']);
+        sleep(1);
+        $baudelaire = doc('author')::create(['name' => 'Charles Baudelaire']);
+
+        doc('book')::create(['title' => 'Notre Dame de Paris', 'year' => 1831, 'author_id' => $hugo->id]);
+        doc('book')::create(['title' => 'Les Contemplations', 'year' => 1855, 'author_id' => $hugo->id]);
+        doc('book')::create(['title' => 'Les Fleurs du Mal', 'year' => 1867, 'author_id' => $baudelaire->id]);
+
+        $this->assertEquals(2, doc('author')::latest()->first()->id);
+        $this->assertEquals(1, doc('author')::oldest()->first()->id);
+        $this->assertEquals('Les Contemplations', doc('book')::sortBy('title')->first()->title);
+        $this->assertEquals('Notre Dame de Paris', doc('book')::sortByDesc('title')->first()->title);
     }
 
     /** @test */
@@ -1003,6 +1079,30 @@ class Modeler extends TestCase
         $this->assertEquals(1, FileAuthor::oldest()->first()->id);
         $this->assertEquals('Les Contemplations', FileBook::sortBy('title')->first()->title);
         $this->assertEquals('Notre Dame de Paris', FileBook::sortByDesc('title')->first()->title);
+    }
+
+    /** @test */
+    public function it_should_be_manytomanyable_by_doc()
+    {
+        $tag1 = doc('hyper_test_super_tag')::create(['name' => 'tag1']);
+        $tag2 = doc('hyper_test_super_tag')::create(['name' => 'tag2']);
+        $notreDame = doc('hyper_test_super_book')::create(['title' => 'Notre Dame de Paris', 'year' => 1831]);
+        $this->assertEquals(0, doc('hyper_test_super_book_tag')::count());
+        $notreDame->sync($tag1);
+        $this->assertEquals(1, doc('hyper_test_super_book_tag')::count());
+        $notreDame->sync($tag2);
+        $this->assertEquals(2, doc('hyper_test_super_book_tag')::count());
+        $p1 = $notreDame->sync($tag1, ['bar' => 'baz']);
+        $notreDame->sync($tag2);
+
+        $this->assertEquals(2, doc('hyper_test_super_book_tag')::count());
+        $this->assertEquals('tag1', $notreDame->getPivots(get_class(doc('hyper_test_super_tag')))->first()->name);
+        $this->assertEquals('baz', $p1->bar);
+
+        $notreDame->detach($tag2);
+
+        $this->assertEquals(1, doc('hyper_test_super_book_tag')::count());
+        MongoHouse::truncate();
     }
 
     /** @test */
@@ -1110,6 +1210,18 @@ class Modeler extends TestCase
     }
 
     /** @test */
+    public function it_should_be_selectable_by_doc()
+    {
+        doc('dummy')::create(['name' => 'foo', 'label' => 'bar']);
+        $row = doc('dummy')::select('name')->first();
+
+        $this->assertArrayNotHasKey('label', $row->toArray());
+        $this->assertArrayNotHasKey('created_at', $row->toArray());
+
+        MongoHouse::truncate();
+    }
+
+    /** @test */
     public function it_should_be_selectable_by_model()
     {
         datum('dummy')::create(['name' => 'foo', 'label' => 'bar']);
@@ -1160,6 +1272,25 @@ class Modeler extends TestCase
     }
 
     /** @test */
+    public function we_can_use_or_query_by_doc()
+    {
+        $country = doc('country', null, ['name' => 'Canada']);
+        doc('product')->create(['name' => 'TV', 'price' => 500]);
+        doc('product')->create(['name' => 'Computer', 'price' => 1000]);
+        doc('product')->create(['name' => 'Book', 'price' => 15, 'country_id' => $country->getId()]);
+
+        $this->assertEquals(3, doc('product')->gt('price', 10)->count());
+        $this->assertEquals(2, doc('product')->gt('price', 100)->count());
+        $this->assertEquals(3, doc('product')->gt('price', 100)->orGt('price', 10)->count());
+        $this->assertEquals(1, doc('product')->gt('price', 100)->orGt('price', 10)->gte('price', 1000)->count());
+        $this->assertEquals(1, doc('product')->gt('price', 10)->whereCountryId($country->getId())->count());
+        $this->assertEquals(1, doc('product')->hasCountry()->count());
+        $this->assertEquals(2, doc('product')->doesntHaveCountry()->count());
+
+        MongoHouse::truncate();
+    }
+
+    /** @test */
     public function we_can_use_or_query_by_model()
     {
         $country = datum('country', 0, ['name' => 'Canada']);
@@ -1174,6 +1305,29 @@ class Modeler extends TestCase
         $this->assertEquals(1, datum('product', 0)->gt('price', 10)->whereCountryId($country->getId())->count());
         $this->assertEquals(1, datum('product', 0)->hasCountry()->count());
         $this->assertEquals(2, datum('product', 0)->doesntHaveCountry()->count());
+    }
+
+    /** @test */
+    public function it_should_have_relations_by_doc()
+    {
+        $hugo = doc('author')->create(['name' => 'Victor Hugo']);
+        $baudelaire = doc('author')->create(['name' => 'Charles Baudelaire']);
+
+        $notreDame = doc('book')->create([
+            'title' => 'Notre Dame de Paris', 'year' => 1831, 'author_id' =>
+            $hugo->id
+        ]);
+
+        $contemplations = doc('book')->create(['title' => 'Les Contemplations', 'year' => 1855, 'author_id' => $hugo->id]);
+        $fleurs = doc('book')->create(['title' => 'Les Fleurs du Mal', 'year' => 1867, 'author_id' => $baudelaire->id]);
+
+        $this->assertEquals($hugo->id, $notreDame->author->id);
+        $this->assertEquals($hugo->id, $contemplations->author->id);
+        $this->assertEquals($baudelaire->id, $fleurs->author->id);
+        $this->assertEquals(2, $hugo->books->count());
+        $this->assertEquals(1, $baudelaire->books->count());
+
+        MongoHouse::truncate();
     }
 
     /** @test */

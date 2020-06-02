@@ -321,15 +321,24 @@ class Item extends Record
 
         if (fnmatch('*s', $name) && !isset($values[$name . '_id'])) {
             $concern    = ucfirst(Str::camel(substr($name, 0, -1)));
-            $modelName  = ucfirst(class_basename($db));
-            $relation   = str_replace('\\' . $modelName, '\\' . $concern, get_class($db));
+
+            if ($mapped = $this->modeler()->isMongo()) {
+                return doc($concern)->where($mapped . '_id', $this['id']);
+            } else {
+                $modelName  = ucfirst(class_basename($db));
+                $relation   = str_replace('\\' . $modelName, '\\' . $concern, get_class($db));
+            }
 
             return $db->hasMany($relation, null, $this);
         }
 
         if (isset($values[$name . '_id']) && is_numeric($values[$name . '_id'])) {
-            $modelName  = ucfirst(class_basename($db));
-            $relation   = str_replace('\\' . $modelName, '\\' . ucfirst(Str::camel($name)), get_class($db));
+            if ($this->modeler()->isMongo()) {
+                return doc($name)->find($values[$name . '_id']);
+            } else {
+                $modelName  = ucfirst(class_basename($db));
+                $relation   = str_replace('\\' . $modelName, '\\' . ucfirst(Str::camel($name)), get_class($db));
+            }
 
             return $db->belongsTo($relation, null, $this);
         }
@@ -374,8 +383,13 @@ class Item extends Record
         if (!array_key_exists($name, $values)) {
             if (fnmatch('*s', $name) && !isset($values[$name . '_id'])) {
                 $concern    = ucfirst(Str::camel(substr($name, 0, -1)));
-                $modelName  = ucfirst(class_basename($db));
-                $relation   = str_replace('\\' . $modelName, '\\' . $concern, get_class($db));
+
+                if ($mapped = $this->modeler()->isMongo()) {
+                    return doc($concern)->where($mapped . '_id', $this['id']);
+                } else {
+                    $modelName  = ucfirst(class_basename($db));
+                    $relation   = str_replace('\\' . $modelName, '\\' . $concern, get_class($db));
+                }
 
                 return $db->hasMany($relation, null, $this);
             }

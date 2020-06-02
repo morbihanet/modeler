@@ -14,6 +14,7 @@ use Morbihanet\Modeler\Accessor;
 use Morbihanet\Modeler\FileStore;
 use Morbihanet\Modeler\LiteStore;
 use Morbihanet\Modeler\RedisStore;
+use Morbihanet\Modeler\MongoStore;
 use Morbihanet\Modeler\MemoryStore;
 use Morbihanet\Modeler\Data\Session;
 use Illuminate\Support\Facades\Route;
@@ -81,6 +82,8 @@ if (!function_exists('model_generator')) {
                 $code .= 'protected static string $store = \\Morbihanet\\Modeler\\FileStore::class;}';
             } else if ($store === LiteStore::class) {
                 $code .= 'protected static string $store = \\Morbihanet\\Modeler\\LiteStore::class;}';
+            } else if ($store === MongoStore::class) {
+                $code .= 'protected static string $store = \\Morbihanet\\Modeler\\MongoStore::class;}';
             }
 
             eval($code);
@@ -110,6 +113,8 @@ if (!function_exists('db_generator')) {
                 $code .= 'protected static string $store = \\Morbihanet\\Modeler\\FileStore::class;}';
             } else if ($store === LiteStore::class) {
                 $code .= 'protected static string $store = \\Morbihanet\\Modeler\\LiteStore::class;}';
+            } else if ($store === MongoStore::class) {
+                $code .= 'protected static string $store = \\Morbihanet\\Modeler\\MongoStore::class;}';
             }
 
             eval($code);
@@ -161,13 +166,72 @@ if (!function_exists('app_config')) {
     }
 }
 
+if (!function_exists('doc')) {
+    function doc(
+        string $model,
+        ?string $database = null,
+        array $attributes = [],
+        ?string $namespace = null,
+        bool $authenticable = false
+    ): Model {
+        return is_mongo(datum(
+            $model,
+            $database ?? 'doc',
+            $attributes,
+            $namespace ?? config('modeler.doc_class', 'App\\Doc\\Models'),
+            $authenticable,
+            'MongoStore'
+        ), $model);
+    }
+
+    function is_booting($class, ?bool $status = null)
+    {
+        static $is_booting = [];
+
+        if (is_bool($status)) {
+            $is_booting[$class] = $status;
+
+            return false;
+        }
+
+        if (Str::startsWith($class, config('modeler.doc_class', 'App\\Doc\\Models'))) {
+            return true;
+        }
+
+        return $is_booting[$class] ?? false;
+    }
+
+    /**
+     * @return Model|string|null
+     */
+    function is_mongo($concern, ?string $mapped = null)
+    {
+        static $mongod = [];
+
+        if (is_string($concern) && empty($mapped)) {
+            return $mongod[$concern] ?? null;
+        }
+
+        if (is_string($concern)) {
+            $concern = new $concern;
+        }
+
+        if (!isset($mongod[$index = get_class($concern)])) {
+            $mongod[$index] = $mapped;
+        }
+
+        return $concern;
+    }
+}
+
 if (!function_exists('datum')) {
     function datum(
         string $model,
         ?string $database = null,
         array $attributes = [],
         ?string $namespace = null,
-        bool $authenticable = false
+        bool $authenticable = false,
+        string $store = 'Store'
     ): Model {
         if (is_array($database)) {
             $attributes = $database;
@@ -187,7 +251,7 @@ if (!function_exists('datum')) {
 
         if (!class_exists($class)) {
             $code = 'namespace ' . $namespace . '; class ' . $model . ' extends \\Morbihanet\\Modeler\\Model {';
-            $code .= 'protected static string $store = \\Morbihanet\\Modeler\\Store::class;}';
+            $code .= 'protected static string $store = \\Morbihanet\\Modeler\\'.$store.'::class;}';
 
             eval($code);
         }
@@ -364,12 +428,27 @@ if (!function_exists('modeler')) {
                 $code .= 'class ' . $model . ' extends \\Morbihanet\\Modeler\\FileStore {}';
             } else if ($store === LiteStore::class) {
                 $code .= 'class ' . $model . ' extends \\Morbihanet\\Modeler\\LiteStore {}';
+            } else if ($store === MongoStore::class) {
+                $code .= 'class ' . $model . ' extends \\Morbihanet\\Modeler\\MongoStore {}';
             }
 
             eval($code);
         }
 
         return new $class;
+    }
+
+    if (!function_exists('getNamespaceByStore')) {
+        function getNamespaceByStore(string $store)
+        {
+            $store = str_replace('Store', '\\', class_basename($store));
+
+            if ($store === '\\') {
+                $store = 'Db';
+            }
+
+            return rtrim('App\\Entities\\' . $store, '\\');
+        }
     }
 
     if (!function_exists('model_rest')) {
