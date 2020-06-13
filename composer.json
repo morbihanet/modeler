@@ -28,16 +28,17 @@
         "php": "^7.4",
         "ext-curl": "*",
         "ext-json": "*",
-        "schpill/mongodb": "*",
         "guzzlehttp/guzzle": "^6.5",
         "josiasmontag/laravel-redis-mock": "^1.2",
-        "laravel/framework": "^5.8|^6.0|^7.0",
-      "ext-mongodb": "*"
+        "laravel/framework": "^5.8|^6.0|^7.0"
     },
     "require-dev": {
+        "ext-mongodb": "*",
         "orchestra/testbench": "^3.8|^4.0|^5.0",
         "phpunit/phpunit": "^8.0",
-        "predis/predis": "^1.1"
+        "predis/predis": "^1.1",
+        "pagerfanta/pagerfanta": "^2.1",
+        "schpill/mongodb": "*"
     },
     "autoload": {
         "psr-4": {

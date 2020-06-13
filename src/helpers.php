@@ -89,7 +89,7 @@ if (!function_exists('model_generator')) {
             eval($code);
         }
 
-        return new $class($attributes);
+        return Core::set('last_datum', new $class($attributes));
     }
 }
 
@@ -120,7 +120,7 @@ if (!function_exists('db_generator')) {
             eval($code);
         }
 
-        return new $class;
+        return Core::set('last_datum', new $class);
     }
 }
 
@@ -262,7 +262,7 @@ if (!function_exists('datum')) {
             $object->fillAndSave($attributes);
         }
 
-        return $object;
+        return Core::set('last_datum', $object);
     }
 
     function item_table(Item $item)

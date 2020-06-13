@@ -3,8 +3,9 @@ namespace Morbihanet\Modeler;
 
 use Illuminate\Support\Str;
 use Illuminate\Support\Carbon;
+use Illuminate\Contracts\Auth\Authenticatable;
 
-class Item extends Record
+class Item extends Record implements Authenticatable
 {
     use ManyToManyable, Notifiable, Morphable;
 
@@ -363,7 +364,13 @@ class Item extends Record
     {
         Event::fire('item:'.get_called_class().':' . $name, $this);
 
-        if (in_array($name, get_class_methods($modeler = $this->modeler()))) {
+        $modeler = $this->modeler();
+
+        if ($modeler::hasMacro($name)) {
+            return $modeler->macroCall($name, array_merge([$this], $arguments));
+        }
+
+        if (in_array($name, get_class_methods($modeler))) {
             $args = array_merge([$this], $arguments);
 
             return $modeler->{$name}(...$args);
@@ -491,5 +498,35 @@ class Item extends Record
         unset($this->options['__db']);
 
         $this->db = Core::get($db);
+    }
+
+    public function getAuthIdentifierName()
+    {
+        return 'id';
+    }
+
+    public function getAuthIdentifier()
+    {
+        return $this[$this->getAuthIdentifierName()];
+    }
+
+    public function getAuthPassword()
+    {
+        return $this['password'];
+    }
+
+    public function getRememberToken()
+    {
+        return $this[$this->getRememberTokenName()] ?? Core::bearer();
+    }
+
+    public function setRememberToken($value)
+    {
+        $this[$this->getRememberTokenName()] = $value;
+    }
+
+    public function getRememberTokenName()
+    {
+        return 'bearer';
     }
 }

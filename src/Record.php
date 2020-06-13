@@ -4,8 +4,9 @@ namespace Morbihanet\Modeler;
 use Illuminate\Support\Str;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Traits\Macroable;
+use Illuminate\Contracts\Support\Arrayable;
 
-class Record implements \IteratorAggregate, \ArrayAccess, \Countable
+class Record implements \IteratorAggregate, \ArrayAccess, \Countable, Arrayable
 {
     use Macroable {
         Macroable::__call as macroCall;

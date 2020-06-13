@@ -3,9 +3,12 @@ namespace Morbihanet\Modeler;
 
 use ArrayAccess;
 use Illuminate\Support\Str;
+use Morbihanet\Modeler\Traits\Permittable;
 
 class Model extends Modeler implements ArrayAccess
 {
+    use Permittable;
+
     protected ?Item $item = null;
     protected array $hidden = [];
     protected array $guarded = [];
@@ -155,13 +158,19 @@ class Model extends Modeler implements ArrayAccess
         return new static($this->item->save($callback)->toArray());
     }
 
-    public function __call(string $name, array $arguments)
+    public function __call($name, $arguments)
     {
         Event::fire('model:' . get_called_class() . ':' . $name, $this);
 
+        if (static::hasMacro($name)) {
+            $arguments = array_merge([$this->item], $arguments);
+
+            return $this->macroCall($name, $arguments);
+        }
+
         $uncamelized = Core::uncamelize($name);
 
-        $methodModeler = Str::camel('scope_' . Core::uncamelize($name));
+        $methodModeler = Str::camel('scope_' . $uncamelized);
 
         if (in_array($methodModeler, get_class_methods($this))) {
             $args = array_merge([static::getDb()], $arguments);

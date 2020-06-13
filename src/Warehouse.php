@@ -270,6 +270,13 @@ class Warehouse extends Model implements ArrayAccess
         $row->update(['v' => serialize($value)]);
     }
 
+    public function bulk(array $rows)
+    {
+        $this->getConnection()->transaction(function () use ($rows) {
+            static::insert($rows);
+        }, 1);
+    }
+
     /**
      * @param mixed $offset
      */

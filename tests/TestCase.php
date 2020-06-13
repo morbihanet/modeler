@@ -10,6 +10,7 @@ use Jenssegers\Mongodb\Connection;
 use Morbihanet\Modeler\MongoHouse;
 use Morbihanet\Modeler\MemoryStore;
 use Morbihanet\Modeler\MailManager;
+use Morbihanet\Modeler\ConsoleObserver;
 use Illuminate\Database\Schema\Blueprint;
 use Orchestra\Testbench\TestCase as Orchestra;
 use M6Web\Component\RedisMock\RedisMock as Mock;
@@ -57,6 +58,8 @@ abstract class TestCase extends Orchestra
         $this->app['config']->set('mail.driver', 'remote');
         $this->app['config']->set('mail.remote.url', '');
         $this->app['config']->set('mail.remote.key', '');
+
+        \Morbihanet\Modeler\Modeler::observeAll(ConsoleObserver::class);
     }
 
     public function tearDown(): void

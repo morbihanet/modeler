@@ -1,22 +1,196 @@
 <?php
 namespace Morbihanet\Modeler\Test;
 
+use Pagerfanta\Pagerfanta;
 use Morbihanet\Modeler\Api;
 use Morbihanet\Modeler\Swap;
 use Morbihanet\Modeler\Core;
 use Morbihanet\Modeler\Able;
+use Morbihanet\Modeler\User;
+use Morbihanet\Modeler\Item;
+use Faker\Generator as Faker;
 use Morbihanet\Modeler\Event;
+use GuzzleHttp\Psr7\Response;
 use Morbihanet\Modeler\Config;
 use Morbihanet\Modeler\Valued;
+use Morbihanet\Modeler\Router;
 use Morbihanet\Modeler\Schedule;
 use Morbihanet\Modeler\Iterator;
 use Morbihanet\Modeler\Scheduler;
 use Morbihanet\Modeler\Collector;
 use Illuminate\Http\JsonResponse;
+use Morbihanet\Modeler\Permitter;
 use Morbihanet\Modeler\MongoHouse;
+use Morbihanet\Modeler\MonitorLazy;
+use Morbihanet\Modeler\MonitorAdmin;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Pagination\LengthAwarePaginator;
 
-class Modeler extends TestCase
+class ModelerTest extends TestCase
 {
+    /** @test */
+    public function it_should_be_seedable()
+    {
+        User::addBoot(function () {
+            Core::incr('boot');
+        });
+
+        User::defineSeeder(function (Faker $faker) {
+            return [
+                'lastname' => $faker->lastName,
+                'firstname' => $faker->firstName,
+                'email' => $faker->safeEmail,
+            ];
+        });
+
+        User::factory()->times(10)->create();
+
+        $this->assertSame(10, User::count());
+    }
+
+    /** @test */
+    public function it_should_be_macroable()
+    {
+        User::macro('foo', function ($user) {
+            return $user->is_admin;
+        });
+
+        User::macro('bar', function ($user, $x) {
+            return $user->getid() + $x;
+        });
+
+        $admin = User::create(['is_admin' => true]);
+
+        $this->assertSame(1, Core::get('boot'));
+        $this->assertTrue($admin->foo());
+        $this->assertSame(10, $admin->bar(9));
+    }
+
+    /** @test */
+    public function it_should_be_authable()
+    {
+        $admin = User::create(['is_admin' => true]);
+        Auth::setUser($admin);
+        $permitter = Permitter::getInstance('core')->addMonitor(new MonitorAdmin);
+
+        Gate::before(function (Item $user, string $ability, array $arguments) use ($permitter) {
+            $subject = array_pop($arguments);
+
+            return $permitter->check($user, $ability, $subject);
+        });
+
+        $this->assertTrue(Gate::allows('foo'));
+    }
+
+    /** @test */
+    public function it_should_be_lazyable()
+    {
+        $lazy = Core::lazy(function () {
+            Core::incr('lazy');
+        });
+
+        $this->assertSame(0, Core::get('lazy', 0));
+
+        $lazy();
+
+        $this->assertSame(1, Core::get('lazy', 0));
+    }
+
+    /** @test */
+    public function it_should_be_monitorable()
+    {
+        $this->assertInstanceOf(Permitter::class, $permission = User::getPermitter());
+
+        $admin = User::create(['is_admin' => true]);
+        $member = User::create(['is_admin' => false]);
+        $this->assertFalse($permission->check($admin, 'demo'));
+        $this->assertFalse($permission->check($member, 'demo'));
+
+        User::addMonitor($adminMonitor = new MonitorAdmin);
+        $this->assertTrue($permission->check($admin, 'demo'));
+        $this->assertFalse($permission->check($member, 'demo'));
+
+        User::addMonitor(new MonitorLazy(function ($user, $permission, $concern) {
+            return $permission === 'is_member';
+        }, function ($user, $permission, $concern) {
+            return !$user->isAdmin();
+        }))->removeMonitor($adminMonitor);
+
+        User::setPermitterUser($admin);
+        $this->assertFalse(User::checkPermission('is_member'));
+        User::setPermitterUser($member);
+        $this->assertTrue(User::checkPermission('is_member'));
+    }
+
+    /** @test */
+    public function it_should_be_routable()
+    {
+        Router::get('/test', function () {
+            return 'baz';
+        })->name('test');
+
+        $this->assertCount(1, Router::getRoutes());
+
+        $_SERVER['REQUEST_URI'] = '/test';
+
+        /** @var Response $response */
+        $response = Router::dispatch();
+
+        $this->assertSame(200, $response->getStatusCode());
+        $this->assertSame('OK', $response->getReasonPhrase());
+        $this->assertSame('baz', (string) $response->getBody());
+    }
+
+    /** @test */
+    public function it_should_be_bulkable()
+    {
+        $db = datum('foo');
+        $rows = $db->bulk([['test' => "bar"], ['test' => "baz"]]);
+
+        $this->assertSame(2, count($rows));
+        $this->assertSame(2, $db::count());
+        $this->assertSame('bar', $db::first()->test);
+        $this->assertSame(get_class($rows->first()), get_class($db::first()));
+        $this->assertSame($rows->first()->test, $db::first()->test);
+    }
+
+    /** @test */
+    public function it_should_be_paginable()
+    {
+        Book::factory()->times(30)->create();
+
+        $forPage = Book::all()->forPage(1, 25);
+        $paginator = Book::all()->paginator();
+        $fanta = Book::all()->fanta();
+
+        $this->assertInstanceOf(Pagerfanta::class, $fanta);
+        $this->assertInstanceOf(LengthAwarePaginator::class, $paginator);
+        $this->assertInstanceOf(Iterator::class, $forPage);
+
+        $results = $fanta->getCurrentPageResults();
+
+        $this->assertSame(25, $results->count());
+        $this->assertSame(25, $paginator->count());
+        $this->assertSame(25, $forPage->count());
+        $this->assertSame(30, $paginator->total());
+        $this->assertSame(30, $fanta->getNbResults());
+        $this->assertSame(Book::first()->name, $results->first()->name);
+
+        $forPage = Book::all()->forPage(2, 25);
+        $paginator = Book::all()->paginator(2);
+        $fanta = Book::all()->fanta(2);
+
+        $results = $fanta->getCurrentPageResults();
+
+        $this->assertSame(5, $results->count());
+        $this->assertSame(5, $paginator->count());
+        $this->assertSame(5, $forPage->count());
+        $this->assertSame(30, $paginator->total());
+        $this->assertSame(30, $fanta->getNbResults());
+        $this->assertSame(Book::find(26)->name, $results->first()->name);
+    }
+
     /** @test */
     public function it_should_be_mongoable()
     {
@@ -975,7 +1149,6 @@ class Modeler extends TestCase
         MongoHouse::truncate();
 
         $hugo = doc('author')::create(['name' => 'Victor Hugo']);
-        sleep(1);
         $baudelaire = doc('author')::create(['name' => 'Charles Baudelaire']);
 
         doc('book')::create(['title' => 'Notre Dame de Paris', 'year' => 1831, 'author_id' => $hugo->id]);
@@ -992,7 +1165,6 @@ class Modeler extends TestCase
     public function it_should_be_sortable_by_model()
     {
         $hugo = datum('author')::create(['name' => 'Victor Hugo']);
-        sleep(1);
         $baudelaire = datum('author')::create(['name' => 'Charles Baudelaire']);
 
         datum('book')::create(['title' => 'Notre Dame de Paris', 'year' => 1831, 'author_id' => $hugo->id]);
@@ -1009,7 +1181,6 @@ class Modeler extends TestCase
     public function it_should_be_sortable()
     {
         $hugo = Author::create(['name' => 'Victor Hugo']);
-        sleep(1);
         $baudelaire = Author::create(['name' => 'Charles Baudelaire']);
 
         Book::create(['title' => 'Notre Dame de Paris', 'year' => 1831, 'author_id' => $hugo->id]);
@@ -1026,7 +1197,6 @@ class Modeler extends TestCase
     public function it_should_be_sortable_redis()
     {
         $hugo = RedisAuthor::create(['name' => 'Victor Hugo']);
-        sleep(1);
         $baudelaire = RedisAuthor::create(['name' => 'Charles Baudelaire']);
 
         RedisBook::create(['title' => 'Notre Dame de Paris', 'year' => 1831, 'author_id' => $hugo->id]);
@@ -1043,7 +1213,6 @@ class Modeler extends TestCase
     public function it_should_be_sortable_memory()
     {
         $hugo = MemoryAuthor::create(['name' => 'Victor Hugo']);
-        sleep(1);
         $baudelaire = MemoryAuthor::create(['name' => 'Charles Baudelaire']);
 
         MemoryBook::create(['title' => 'Notre Dame de Paris', 'year' => 1831, 'memory_author_id' => $hugo->id]);
@@ -1064,7 +1233,6 @@ class Modeler extends TestCase
     public function it_should_be_sortable_file()
     {
         $hugo = FileAuthor::create(['name' => 'Victor Hugo']);
-        sleep(1);
         $baudelaire = FileAuthor::create(['name' => 'Charles Baudelaire']);
 
         FileBook::create(['title' => 'Notre Dame de Paris', 'year' => 1831, 'file_author_id' => $hugo->id]);
@@ -1423,5 +1591,15 @@ class Modeler extends TestCase
 
         $this->assertEquals(2, $hugo->file_books->count());
         $this->assertEquals(1, $baudelaire->file_books->count());
+    }
+
+    public function testNbqueries()
+    {
+        $this->assertGreaterThan(0, Core::get('console_queries_writing'));
+        $this->assertGreaterThan(0, Core::get('console_queries_reading'));
+
+        fwrite(STDERR, print_r("\n\n" . 'Queries writing => ' . $w = Core::get('console_queries_writing'), true));
+        fwrite(STDERR, print_r("\n" . 'Queries reading => ' . $r = Core::get('console_queries_reading'), true));
+        fwrite(STDERR, print_r("\n\n" . 'Queries total => ' . ($r + $w), true));
     }
 }

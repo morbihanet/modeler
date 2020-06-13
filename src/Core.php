@@ -20,10 +20,11 @@ use Illuminate\Mail\Markdown;
 use Illuminate\Support\Carbon;
 use Faker\Provider\fr_FR\Company;
 use Illuminate\Http\JsonResponse;
-use Jenssegers\Mongodb\Connection;
 use Illuminate\Container\Container;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Faker\Provider\fr_FR\PhoneNumber;
 use Illuminate\Filesystem\Filesystem;
@@ -37,7 +38,7 @@ use Symfony\Component\HttpFoundation\File\Exception\FileException;
 class Core
 {
     protected static array $data = [];
-    protected static ?Generator $faker;
+    protected static ?Generator $faker = null;
     protected static bool $booted = false;
 
     /** @var string */
@@ -72,16 +73,35 @@ class Core
         );
     }
 
-    /**
-     * @param string $key
-     * @param mixed $value
-     * @return mixed
-     */
+    public static function getOr(string $key, $value)
+    {
+        if (!static::has($key)) {
+            $value = value($value);
+            static::set($key, $value);
+
+            return $value;
+        }
+
+        return static::get($key);
+    }
+
     public static function set(string $key, $value)
     {
         static::$data[$key] = $value;
 
         return $value;
+    }
+
+    public static function incr(string $key, int $by = 1): int
+    {
+        static::set($key, $value = static::get($key, 0) + $by);
+
+        return $value;
+    }
+
+    public static function decr(string $key, int $by = 1): int
+    {
+        return static::incr($key, $by * -1);
     }
 
     /**
@@ -98,6 +118,15 @@ class Core
         return new static;
     }
 
+    /**
+     * @param string $key
+     * @return bool
+     */
+    public static function has(string $key): bool
+    {
+        return isset(static::$data[$key]);
+    }
+
     public static function faker(string $locale = 'fr_FR'): Generator
     {
         if (static::$faker === null) {
@@ -107,15 +136,6 @@ class Core
         }
 
         return static::$faker;
-    }
-
-    /**
-     * @param string $key
-     * @return bool
-     */
-    public static function has(string $key): bool
-    {
-        return isset(static::$data[$key]);
     }
 
     /**
@@ -397,6 +417,39 @@ class Core
         }
     }
 
+    public static function call_func($callback, ...$args)
+    {
+        if (is_string($callback) && strpos($callback, '::') !== false) {
+            $callback = explode('::', $callback);
+        } elseif (is_string($callback) && strpos($callback, '@') !== false) {
+            $callback = explode('@', $callback);
+        }
+
+        if (is_string($callback) && class_exists($callback)) {
+            $callback = static::app()->make($callback);
+        }
+
+        if (is_array($callback) && isset($callback[1]) && is_object($callback[0])) {
+            if (!empty($args)) {
+                $args = array_values($args);
+            }
+
+            return static::app()->call($callback, $args);
+        } elseif (is_array($callback) && isset($callback[1]) && is_string($callback[0])) {
+            [$class, $method] = $callback;
+            $class = '\\'.ltrim($class, '\\');
+            $instance = static::app()->make($class);
+
+            return static::app()->call([$instance, $method], $args);
+        } elseif ($callback instanceOf Closure) {
+            return static::resolveClosure($callback, ...$args);
+        } elseif (is_object($callback) && in_array('__invoke', get_class_methods($callback))) {
+            return static::app()->call([$callback, '__invoke'], ...$args);
+        }
+
+        return $callback(...$args);
+    }
+
     /**
      * @param mixed $concern
      * @return Closure
@@ -414,9 +467,7 @@ class Core
      */
     public static function delete(string $key): bool
     {
-        $status = static::has($key);
-
-        if ($status) {
+        if ($status = static::has($key)) {
             unset(static::$data[$key]);
         }
 
@@ -430,6 +481,13 @@ class Core
     public static function now($tz = null): Carbon
     {
         return Date::now($tz);
+    }
+
+    public static function lazy(Closure $callback, ...$parameters): Closure
+    {
+        return function () use ($callback, $parameters) {
+            return static::app()->call($callback, $parameters);
+        };
     }
 
     /**
@@ -465,6 +523,8 @@ class Core
         if (false === static::$booted) {
             static::$booted = true;
 
+            Event::fire('core.booting');
+
             if (!headers_sent()) {
                 static::bearer();
             }
@@ -473,7 +533,20 @@ class Core
                 return $this->getData(true);
             });
 
-            Event::fire('core.boot');
+            Event::fire('core.booted');
+        }
+    }
+
+    public static function gate(): void
+    {
+        if (isset($_SESSION) && $user = Session::getInstance()->user()) {
+            Auth::setUser($user);
+
+            Gate::before(function (Item $user, string $ability, array $arguments) {
+                $subject = array_pop($arguments);
+
+                return Permitter::getInstance('core')->check($user, $ability, $subject);
+            });
         }
     }
 
@@ -1174,7 +1247,19 @@ class Core
     {
         $name = $item instanceof Item ? Str::lower(class_basename($item)) : Str::lower(static::uncamelize($item));
 
-        return Modeler::factorModel($name);
+        return static::getLastDb(Modeler::factorModel($name));
+    }
+
+    public static function getLastDb($db)
+    {
+        /** @var static $last */
+        if ($last = static::get('last_datum')) {
+            if (class_basename($db) === class_basename($last)) {
+                return $last->getDb(false);
+            }
+        }
+
+        return $db;
     }
 
     public static function str()
@@ -1687,5 +1772,23 @@ value="'.static::getToken().'"
     public static function getMongoSession()
     {
         return static::mongo()->startSession();
+    }
+
+    public static function matches(string $needle, string $haystack): bool
+    {
+        return stripos($haystack, $needle) !== false;
+    }
+
+    public static function getCalledClass(): string
+    {
+        $traces = debug_backtrace();
+
+        if (isset($traces[2])) {
+            if (isset($traces[2]['object'])) {
+                return get_class($traces[2]['object']);
+            }
+        }
+
+        return static::class;
     }
 }

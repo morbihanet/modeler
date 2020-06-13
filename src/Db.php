@@ -678,6 +678,15 @@ class Db
         return $this->__resolver;
     }
 
+    public function bulk(array $records)
+    {
+        $this->fire('bulk');
+
+        foreach ($records as $record) {
+            $record->save();
+        }
+    }
+
     /**
      * @param mixed $concern
      * @return string
@@ -1034,12 +1043,12 @@ class Db
             $observers = Core::get('itdb.observers', []);
             $self = get_called_class();
 
-            $observer = Arr::get($observers, $self, null);
+            $observer = Arr::get($observers, $self, Arr::get($observers, Modeler::class));
 
             if (null !== $observer) {
                 $methods = get_class_methods($observer);
 
-                if (in_array($event, $methods)) {
+                if (in_array($event, $methods) || (count($methods) === 1 && in_array('__call', $methods))) {
                     $result = (new $observer)->{$event}($concern);
 
                     if ($return) {

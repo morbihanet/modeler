@@ -3,7 +3,7 @@ namespace Morbihanet\Modeler;
 
 class Can
 {
-    protected $target;
+    protected $target = null;
     protected ?Item $user = null;
     protected array $resolvers = [];
 

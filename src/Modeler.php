@@ -4,6 +4,7 @@ namespace Morbihanet\Modeler;
 use Illuminate\Support\Str;
 use Illuminate\Support\Arr;
 use Faker\Generator as Faker;
+use Illuminate\Support\Traits\Macroable;
 
 /**
  * @method Item|Iterator findOrFail($id)
@@ -147,10 +148,15 @@ use Faker\Generator as Faker;
 
 class Modeler
 {
+    use Macroable {
+        Macroable::__call as macroCall;
+    }
+
     protected static string $store = Store::class;
     public static string $connection = 'default';
     protected static array $booted = [];
     protected static array $rules = [];
+    protected static array $seeders = [];
     protected bool $authenticable = false;
 
     public function __construct()
@@ -162,6 +168,11 @@ class Modeler
         if (!$hasBooted) {
             static::boot();
         }
+    }
+
+    public static function defineSeeder($seeder)
+    {
+        static::$seeders[get_called_class()] = $seeder;
     }
 
     /**
@@ -176,15 +187,41 @@ class Modeler
         return static::factorModel($model)->observe($observerClass);
     }
 
+    public static function observeAll(string $observerClass): void
+    {
+        $observers = Core::get('itdb.observers', []);
+        $observers[static::class] = $observerClass;
+        Core::set('itdb.observers', $observers);
+    }
+
+    public static function macro($name, $macro)
+    {
+        static::$macros[$name] = $macro;
+
+        if ('boot' !== $name && !isset(static::$booted[get_called_class()])) {
+            static::boot();
+        }
+    }
+
     protected static function boot()
     {
         Core::set('modeler_store', static::$store);
+
         $class = get_called_class();
-//
+
+        static::$booted[$class] = true;
+
+        Event::fire('model:' . $class . ':booting');
+
         if (static::$store === MongoStore::class && !is_mongo($class) && !is_booting($class)) {
             is_booting($class, true);
-            $mapped = Str::lower(class_basename($class));
-            is_mongo($class, $mapped);
+            is_mongo($class, Str::lower(class_basename($class)));
+        }
+
+        Event::fire('model:' . $class . ':booted');
+
+        if (static::hasMacro('boot')) {
+            (new static)->macroCall('boot', []);
         }
     }
 
@@ -242,7 +279,16 @@ class Modeler
      */
     public static function factory(?callable $callable = null): Macro
     {
-        $factory = Macro::__instance('it_factory_' . get_class($db = static::getDb()));
+        Core::set('modeler', $class = get_called_class());
+
+        $hasBooted = isset(static::$booted[$class]);
+
+        if (!$hasBooted) {
+            static::boot();
+        }
+
+        $db = static::getDb();
+        $factory = Macro::__instance('it_factory_' . get_class($db));
 
         $factory->_times = 1;
 
@@ -295,13 +341,41 @@ class Modeler
         return $factory;
     }
 
+    public static function bulk(array $rows)
+    {
+        $models = [];
+
+        $db = static::getDb();
+
+        foreach ($rows as $row) {
+            $models[] = $db->create($row)['id'];
+        }
+
+        return Core::iterator(function () use ($models, $db) {
+            foreach ($models as $id) {
+                yield $db->find($id)->toArray();
+            }
+        })->setModel($db);
+    }
+
     /**
      * @param Faker $faker
      * @return array
      */
     protected static function seeder(Faker $faker): array
     {
-        return [];
+        $seeder = static::$seeders[get_called_class()] ?? [];
+
+        if (is_callable($seeder)) {
+            $seeder = $seeder($faker);
+        }
+
+        return $seeder;
+    }
+
+    public static function addBoot(callable $boot)
+    {
+        static::macro('boot', $boot);
     }
 
     /**
@@ -336,9 +410,18 @@ class Modeler
     /**
      * @return Store|FileStore|RedisStore|MemoryStore
      */
-    public static function getDb()
+    public static function getDb(bool $check = true)
     {
-        return static::factorModel(static::getModelName(get_called_class()));
+        $db = static::factorModel(static::getModelName(get_called_class()));
+
+        if (true === $check && $last = Core::get('last_datum')) {
+            /** @var static $last */
+            if (class_basename($db) === class_basename($last)) {
+                return $last->getDb(false);
+            }
+        }
+
+        return $db;
     }
 
     public static function getModelName(string $model)
@@ -385,7 +468,6 @@ class Modeler
     {
         $model = ucfirst(Str::camel(str_replace('.', '\\_', $model)));
         $namespace = config('modeler.model_class', 'DB\\Models');
-//
         $class = $namespace . '\\' . $model;
 
         if (!class_exists($class)) {

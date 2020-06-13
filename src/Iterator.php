@@ -4,16 +4,19 @@ namespace Morbihanet\Modeler;
 use Closure;
 use stdClass;
 use Exception;
+use Countable;
 use Traversable;
 use ArrayIterator;
 use JsonSerializable;
 use IteratorAggregate;
+use Pagerfanta\Pagerfanta;
 use Illuminate\Support\Str;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Enumerable;
 use Illuminate\Support\LazyCollection;
 use Illuminate\Support\Traits\Macroable;
 use Illuminate\Contracts\Support\Jsonable;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 /**
@@ -39,7 +42,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
  * @property-read Proxy $unique
  */
 
-class Iterator implements IteratorAggregate
+class Iterator implements IteratorAggregate, Countable
 {
     use Macroable {
         Macroable::__call as macroCall;
@@ -519,16 +522,14 @@ class Iterator implements IteratorAggregate
         return $this->over(function () use ($limit) {
             $iterator = $this->getIterator();
 
-            while (--$limit) {
+            for ($i = 0; $i < $limit; ++$i) {
                 if (!$iterator->valid()) {
                     break;
                 }
 
                 yield $iterator->key() => $iterator->current();
 
-                if ($limit) {
-                    $iterator->next();
-                }
+                $iterator->next();
             }
         });
     }
@@ -575,13 +576,35 @@ class Iterator implements IteratorAggregate
      * @param int $perPage
      * @return Iterator
      */
-    public function forPage(int $page, int $perPage = 15): self
+    public function forPage(int $page = 1, int $perPage = 15): self
     {
         if (1 === $page) {
             return $this->take($perPage);
         }
 
         return $this->slice(max(0, ($page - 1) * $perPage), $perPage);
+    }
+
+    public function paginator(?int $page = null, ?int $perPage = null): LengthAwarePaginator
+    {
+        $page = $page ?? request()->get('page', 1);
+        $perPage = $perPage ?? request()->get('max_per_page', 25);
+
+        $sliced = $this->slice(($page - 1) * $perPage, $perPage);
+
+        return new LengthAwarePaginator(
+            $sliced,
+            $this->count(), $perPage, $page, [
+            'path' => LengthAwarePaginator::resolveCurrentPath(),
+        ]);
+    }
+
+    public function fanta(?int $page = null, ?int $perPage = null): Pagerfanta
+    {
+        return (new Pagerfanta(new PagerFantaAdapter($this)))
+            ->setMaxPerPage($perPage ?? request()->get('max_per_page', 25))
+            ->setCurrentPage($page ?? request()->get('page', 1))
+        ;
     }
 
     /**
@@ -609,7 +632,11 @@ class Iterator implements IteratorAggregate
             return $this->exec('slice', func_get_args());
         }
 
-        $instance = $this->skip($offset);
+        $instance = $this;
+
+        if (0 < $offset) {;
+            $instance = $this->skip($offset);
+        }
 
         return is_null($length) ? $instance : $instance->take($length);
     }
@@ -623,8 +650,9 @@ class Iterator implements IteratorAggregate
         return $this->over(function () use ($count) {
             $iterator = $this->getIterator();
 
-            while ($iterator->valid() && --$count) {
+            while ($iterator->valid() && 0 < $count) {
                 $iterator->next();
+                --$count;
             }
 
             while ($iterator->valid()) {
@@ -821,12 +849,12 @@ class Iterator implements IteratorAggregate
 
     public function latest(string $column = 'created_at'): self
     {
-        return $this->sortBy($column, 'DESC');
+        return $this->sortByDesc('id')->sortByDesc($column);
     }
 
     public function oldest(string $column = 'created_at'): self
     {
-        return $this->sortBy($column);
+        return $this->sortBy('id')->sortBy($column);
     }
 
     public function sortByDesc($column): self

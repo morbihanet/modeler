@@ -267,7 +267,7 @@ class Session extends Store implements
     /**
      * @param string|null $key
      * @param null $default
-     * @return mixed|null
+     * @return Item|mixed|null
      */
     public function user(?string $key = null, $default = null)
     {
@@ -355,7 +355,7 @@ class Session extends Store implements
 
     /**
      * @param $id
-     * @return mixed
+     * @return Item|mixed
      */
     public function makeUser($id)
     {
