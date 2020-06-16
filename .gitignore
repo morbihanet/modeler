@@ -2,3 +2,5 @@
 /.git
 /.idea
 .env
+config.user.inc.php
+.phpunit.result.cache

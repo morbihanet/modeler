@@ -98,7 +98,7 @@ class Db
      * @param array $attributes
      * @return Item
      */
-    public static function make(array $attributes): Item
+    public static function make(array $attributes = []): Item
     {
         return static::self()->create($attributes);
     }
@@ -107,7 +107,7 @@ class Db
      * @param array $data
      * @return Item
      */
-    public function create(array $data): Item
+    public function create(array $data = []): Item
     {
         return $this->model($data)->save();
     }
@@ -116,20 +116,18 @@ class Db
      * @param array $data
      * @return Item
      */
-    public function insert(array $data): Item
+    public function insert(array $data = []): Item
     {
         return $this->model($data)->save();
     }
 
     /**
-     * @param array|string $only
+     * @param array|string|null $only
      * @return Item
      */
-    public function asPosted($only): Item
+    public function asPosted($only = null): Item
     {
-        $data = Arr::only($_POST, func_get_args());
-
-        return $this->create($data);
+        return $this->create($only ? Arr::only($_POST, func_get_args()) : $_POST);
     }
 
     /**

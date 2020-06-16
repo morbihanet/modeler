@@ -51,12 +51,14 @@ services:
             - "8236:3306"
 
     phpmyadmin:
-        image: phpmyadmin/phpmyadmin
+        image: phpmyadmin/phpmyadmin:latest
         links:
             - mysql
         environment:
             PMA_HOST: mysql
             PMA_PORT: 3306
+        volumes:
+          - ./config.user.inc.php:/etc/phpmyadmin/config.inc.php:ro
         ports:
             - 8283:80
 
