@@ -48,3 +48,5 @@ RUN pecl install mongodb && docker-php-ext-enable mongodb
 
 # Enable apache modules
 RUN a2enmod rewrite headers proxy
+
+WORKDIR /var/www

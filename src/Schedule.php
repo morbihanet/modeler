@@ -1,7 +1,7 @@
 <?php
 namespace Morbihanet\Modeler;
 
-class Schedule extends Modeler
+class Schedule extends Model
 {
     public static function boot()
     {

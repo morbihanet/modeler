@@ -2,7 +2,9 @@
 namespace Morbihanet\Modeler\Test;
 
 use Pagerfanta\Pagerfanta;
+use Morbihanet\Tools\Tool;
 use Morbihanet\Modeler\Api;
+use BadMethodCallException;
 use Morbihanet\Modeler\Swap;
 use Morbihanet\Modeler\Core;
 use Morbihanet\Modeler\Able;
@@ -29,13 +31,73 @@ use Illuminate\Pagination\LengthAwarePaginator;
 
 class ModelerTest extends TestCase
 {
+    private $foo = 'bar';
+
+    private function isprivate(bool $a)
+    {
+        return true && $a;
+    }
+
     /** @test */
-    public function it_should_be_seedable()
+    public function it_should_be_table_facable()
+    {
+        Country::create(['name' => 'foo']);
+        $this->assertSame(0, City::count());
+        $this->assertSame(1, Country::count());
+        Country::create(['name' => 'bar']);
+        City::create(['name' => 'foo']);
+        $this->assertSame(1, City::count());
+        $this->assertSame(2, Country::count());
+    }
+
+    /** @test */
+    public function it_should_be_toolable()
+    {
+        $tool = tooler('tool');
+
+        $this->assertInstanceOf(Tool::class, $tool);
+
+        $this->expectException(BadMethodCallException::class);
+
+        $tool->test();
+
+        $tool->macro('test', function () {
+            return 'foo';
+        });
+
+        $this->assertSame('foo', $tool->test());
+    }
+
+    /** @test */
+    public function it_should_be_bindable()
+    {
+        $this->assertTrue(Core::callIn($this, 'isprivate', true));
+        $this->assertFalse(Core::callIn($this, 'isprivate', false));
+        $this->assertSame('bar', Core::callIn($this, 'foo'));
+        $this->foo = 'baz';
+        $this->assertSame('baz', Core::callIn($this, 'foo'));
+    }
+
+    /** @test */
+    public function it_should_be_first_deletable()
     {
         User::addBoot(function () {
             Core::incr('boot');
         });
 
+        $this->assertTrue(User::isEmpty());
+
+        User::create(['name' => 'foo']);
+
+        $this->assertSame(1, User::count());
+        $this->assertFalse(User::whereName('bar')->deleteFirst());
+        $this->assertTrue(User::whereName('foo')->deleteFirst());
+        $this->assertSame(0, User::count());
+    }
+
+    /** @test */
+    public function it_should_be_seedable()
+    {
         User::defineSeeder(function (Faker $faker) {
             return [
                 'lastname' => $faker->lastName,
@@ -44,9 +106,13 @@ class ModelerTest extends TestCase
             ];
         });
 
-        User::factory()->times(10)->create();
+        User::factory()->times(10)->create(['foo' => 'bar']);
 
         $this->assertSame(10, User::count());
+        $this->assertSame('bar', User::first()->foo);
+        $this->assertSame('bar', User::first()['foo']);
+        $this->assertSame('bar', User::first()->getFoo());
+        $this->assertSame(10, User::whereFoo('bar')->count());
     }
 
     /** @test */
@@ -200,7 +266,7 @@ class ModelerTest extends TestCase
         $this->assertSame(1, MongoBook::count());
 
         $db = doc('book');
-        $db::create(['title' => 'Les Fleurs du Mal', 'year' => 1867]);
+        $db::create(['title' => 'Les Fleurs du Mal', 'year' => 1868]);
         $this->assertEquals(1, $db::count());
         $this->assertTrue($db::exists());
     }
@@ -407,8 +473,8 @@ class ModelerTest extends TestCase
     /** @test */
     public function it_should_be_scheduled()
     {
-        $event = Scheduler::define(function ($e) {
-            $e['test'] = $e['test'] + 1;
+        $event = Scheduler::define(function (Scheduler $ev) {
+            $ev['test'] = $ev['test'] + 1;
         })->everyFifteenSeconds();
 
         $event['test'] = 0;

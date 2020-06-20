@@ -194,9 +194,9 @@ class Iterator implements IteratorAggregate, Countable
     /**
      * @return bool
      */
-    public function isEmpty()
+    public function isEmpty(): bool
     {
-        return !$this->getIterator()->valid();
+        return 0 === $this->count();
     }
 
     public function all(): array
@@ -299,6 +299,19 @@ class Iterator implements IteratorAggregate, Countable
                 yield $from;
             }
         });
+    }
+
+    public function deleteFirst(): bool
+    {
+        if ($this->model instanceof Db) {
+            if ($row = $this->first()) {
+                $row->delete();
+
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -463,7 +476,7 @@ class Iterator implements IteratorAggregate, Countable
     /**
      * @return bool
      */
-    public function exists()
+    public function exists(): bool
     {
         return $this->count() > 0;
     }
@@ -471,7 +484,7 @@ class Iterator implements IteratorAggregate, Countable
     /**
      * @return bool
      */
-    public function notExists()
+    public function notExists(): bool
     {
         return !$this->exists();
     }

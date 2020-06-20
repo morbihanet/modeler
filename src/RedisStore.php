@@ -15,19 +15,14 @@ class RedisStore extends Db
         $prefix = $this->__prefix = "dbf.$class";
 
         $this->__resolver = function () use ($prefix) {
-            $ids = Redis::hkeys($prefix);
+            $lastId = $this->lastInsertId();
+            $min = Redis::get($this->__prefix . '.min') ?? 0;
 
-            if (!empty($ids)) {
-                $cursor = (int) min($ids);
-                $max = (int) max($ids);
-                unset($ids);
-
-                while ($cursor <= $max) {
-                    if ($row = Redis::hget($prefix, $cursor)) {
+            if ($lastId > 0 && $min > 0) {
+                for ($i = $min; $i <= $lastId; ++$i) {
+                    if ($row = Redis::hget($prefix, $i)) {
                         yield $this->unserialize($row);
                     }
-
-                    ++$cursor;
                 }
             }
         };
@@ -44,16 +39,13 @@ class RedisStore extends Db
      */
     public function first()
     {
-        $ids = Redis::hkeys($this->__prefix);
+        $min = Redis::get($this->__prefix . '.min') ?? 0;
 
-        if (!empty($ids)) {
-            $id = (int) min($ids);
-            unset($ids);
-
+        if (0 < $min) {
             return $this->model(
                 $this->withSelect(
                     $this->unserialize(
-                        Redis::hget($this->__prefix, $id)
+                        Redis::hget($this->__prefix, $min)
                     )
                 )
             );
@@ -67,16 +59,13 @@ class RedisStore extends Db
      */
     public function last()
     {
-        $ids = Redis::hkeys($this->__prefix);
+        $lastId = $this->lastInsertId();
 
-        if (!empty($ids)) {
-            $id = (int) max($ids);
-            unset($ids);
-
+        if (0 < $lastId) {
             return $this->model(
                 $this->withSelect(
                     $this->unserialize(
-                        Redis::hget($this->__prefix, $id)
+                        Redis::hget($this->__prefix, $lastId)
                     )
                 )
             );
@@ -107,8 +96,22 @@ class RedisStore extends Db
     {
         $prefix = $this->__prefix;
 
-        Redis::hdel($prefix, (int) $record['id']);
+        $id = (int) $record['id'];
+
+        Redis::hdel($prefix, $id);
         Redis::set($prefix . '.lc', time());
+
+        $min = (int) Redis::get($prefix . '.min');
+
+        if ($min >= $id) {
+            $next = $id + 1;
+
+            if (Redis::hget($prefix, $next)) {
+                Redis::set($prefix . '.min', $next);
+            } else {
+                Redis::del($prefix . '.min');
+            }
+        }
 
         return true;
     }
@@ -118,7 +121,15 @@ class RedisStore extends Db
      */
     public function makeId(): int
     {
-        return (int) Redis::incr($this->__prefix . '.ids');
+        $id = (int) Redis::incr($this->__prefix . '.ids');
+
+        $min = Redis::get($this->__prefix . '.min');
+
+        if (null === $min) {
+            Redis::set($this->__prefix . '.min', $id);;
+        }
+
+        return $id;
     }
 
     /**
@@ -126,7 +137,9 @@ class RedisStore extends Db
      */
     public function lastInsertId(): int
     {
-        return (int) Redis::get($this->__prefix . '.ids');
+        $id = Redis::get($this->__prefix . '.ids') ?? 0;
+
+        return (int) $id;
     }
 
     /**

@@ -157,7 +157,7 @@ class Context implements ArrayAccess
 
     public function __call(string $name, array $arguments)
     {
-        if (self::hasMacro($name)) {
+        if (static::hasMacro($name)) {
             return $this->macroCall($name, $arguments);
         }
 

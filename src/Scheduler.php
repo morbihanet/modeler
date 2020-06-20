@@ -1,13 +1,15 @@
 <?php
 namespace Morbihanet\Modeler;
 
-use Closure;
 use ArrayAccess;
+use Ramsey\Uuid\Uuid;
 use Cron\CronExpression;
 use Illuminate\Support\Carbon;
 
 class Scheduler implements ArrayAccess
 {
+    protected ?string $id = null;
+
     /** @var string */
     protected $expression = '* * * * *';
 
@@ -30,7 +32,7 @@ class Scheduler implements ArrayAccess
     protected $callback;
 
     /** @var array */
-    protected array $parameters;
+    protected array $parameters = [];
 
     /** @var Item|null */
     protected ?Item $user = null;
@@ -43,6 +45,7 @@ class Scheduler implements ArrayAccess
     {
         $this->callback = $callback;
         $this->parameters = $parameters;
+        $this->id = Uuid::uuid4()->toString();
     }
 
     /**
@@ -94,24 +97,29 @@ class Scheduler implements ArrayAccess
         return $done;
     }
 
+    protected function makeKey(string $key)
+    {
+        return $this->id . $key;
+    }
+
     public function __get(string $key)
     {
-        return Core::get('scheduler_' . $key);
+        return Core::get('scheduler_' . $this->makeKey($key));
     }
 
     public function __set(string $key, $value)
     {
-        Core::set('scheduler_' . $key, $value);
+        Core::set('scheduler_' . $this->makeKey($key), $value);
     }
 
     public function __isset(string $key)
     {
-        return Core::has('scheduler_' . $key);
+        return Core::has('scheduler_' . $this->makeKey($key));
     }
 
     public function __unset(string $key)
     {
-        return Core::delete('scheduler_' . $key);
+        return Core::delete('scheduler_' . $this->makeKey($key));
     }
 
     /**
@@ -579,5 +587,17 @@ class Scheduler implements ArrayAccess
     public function offsetUnset($offset)
     {
         $this->__unset($offset);
+    }
+
+    public function getId(): ?string
+    {
+        return $this->id;
+    }
+
+    public function setId(string $id): self
+    {
+        $this->id = $id;
+
+        return $this;
     }
 }

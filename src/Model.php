@@ -89,7 +89,10 @@ class Model extends Modeler implements ArrayAccess
     {
         $class = $this->itemClass();
 
-        return Event::fire('model:' . get_called_class() . ':newModel', new $class(static::getDb(), $attributes));
+        return Event::fire(
+            'model:' . get_called_class() . ':newModel',
+            new $class(static::getDb(), $attributes)
+        );
     }
 
     public function guarded(array $guarded): Model

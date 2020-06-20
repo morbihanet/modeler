@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Str;
+use Morbihanet\Modeler\Dyn;
 use Morbihanet\Modeler\Item;
 use Illuminate\Http\Request;
 use Morbihanet\Modeler\Core;
@@ -397,6 +398,24 @@ if (!function_exists('valued')) {
 
         if (!class_exists($class)) {
             $code = 'namespace ' . $namespace . '; class ' . $model . ' extends \\Morbihanet\\Modeler\\Valued {}';
+
+            eval($code);
+        }
+
+        return new $class;
+    }
+}
+
+if (!function_exists('tooler')) {
+    function tooler(string $name): Dyn
+    {
+        $name = ucfirst(Str::camel(str_replace('.', '\\_', $name)));
+        $namespace = 'Morbihanet\\Tools';
+        $class = $namespace . '\\' . $name;
+
+        if (!class_exists($class)) {
+            $code = 'namespace ' . $namespace . ';';
+            $code .= 'class ' . $name . ' extends \\Morbihanet\\Modeler\\Dyn {}';
 
             eval($code);
         }

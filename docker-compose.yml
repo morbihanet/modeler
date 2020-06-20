@@ -52,6 +52,7 @@ services:
 
     phpmyadmin:
         image: phpmyadmin/phpmyadmin:latest
+        restart: always
         links:
             - mysql
         environment:
@@ -75,6 +76,7 @@ services:
 
     redis:
         image: redislabs/redisearch:latest
+        restart: always
         command: redis-server --appendonly yes --loadmodule /usr/lib/redis/modules/redisearch.so
         ports:
             - 1793:6379

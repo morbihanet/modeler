@@ -7,7 +7,6 @@ use Morbihanet\Modeler\Redis;
 use Morbihanet\Modeler\Store;
 use Morbihanet\Modeler\FileStore;
 use Jenssegers\Mongodb\Connection;
-use Morbihanet\Modeler\MongoHouse;
 use Morbihanet\Modeler\MemoryStore;
 use Morbihanet\Modeler\MailManager;
 use Morbihanet\Modeler\ConsoleObserver;

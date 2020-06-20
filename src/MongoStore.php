@@ -30,7 +30,9 @@ class MongoStore extends Db
         }
 
         $this->__resolver = function () use ($store) {
-            $rows = $store->select('v')->where('k', 'like', $store->getNamespace() . '.row.%')->cursor();
+            $rows = $this->queryCursor(
+                $store->select('v')->where('k', 'like', $store->getNamespace() . '.row.%')
+            );
 
             /** @var MongoModel $row */
             foreach ($rows as $row) {
@@ -43,6 +45,17 @@ class MongoStore extends Db
         }
 
         parent::__construct(Core::iterator($this->getResolver())->setModel($this));
+    }
+
+    protected function queryCursor(Builder $builder)
+    {
+        $callable = function () use ($builder) {
+            foreach ($builder->get() as $row) {
+                yield $row;
+            }
+        };
+
+        return Core::iterator($callable);
     }
 
     /**
@@ -354,10 +367,9 @@ class MongoStore extends Db
         $store = $this->__store;
 
         $db = function () use ($store, $key, $value) {
-            $rows = $store->select('v')
+            $rows = $this->queryCursor($store->select('v')
                 ->where('k', 'like', $store->getNamespace() . '.row.%')
-                ->where('v', 'like', 'a%s:'.strlen($key).':"'.$key.'";%'.addslashes($value).'%')
-                ->cursor()
+                ->where('v', 'like', 'a%s:'.strlen($key).':"'.$key.'";%'.addslashes($value).'%'))
             ;
 
             foreach ($rows as $row) {

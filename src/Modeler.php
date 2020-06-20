@@ -41,6 +41,10 @@ use Illuminate\Support\Traits\Macroable;
  * @method int destroy()
  * @method Iterator groupBy(string $groupBy, bool $preserveKeys = false)
  * @method Iterator where(string $column, ?string $operator = null, $value = null, string $boolean = 'and')
+ * @method Iterator whereName($value)
+ * @method Iterator whereId($value)
+ * @method Iterator whereCreatedAt($value)
+ * @method Iterator whereUpdatedAt($value)
  * @method Iterator like(string $column, string $value)
  * @method Iterator orLike(string $column, string $value)
  * @method Iterator notLike(string $column, string $value)
@@ -143,6 +147,7 @@ use Illuminate\Support\Traits\Macroable;
  * @property-read Proxy $sum
  * @property-read Proxy $unique
  *
+ * @mixin Iterator
  * @see Iterator
  */
 
@@ -255,15 +260,14 @@ class Modeler
         return is_mongo(get_called_class());
     }
 
-    public static function __callStatic(string $name, array $arguments)
+    public static function __callStatic($name, $arguments)
     {
         Core::set('modeler', $class = get_called_class());
 
-        return Event::fire('modeler:'.$class.':' . $name, static::factorModel(static::getModelName($class)))
-            ->{$name}(...$arguments);
+        return Event::fire('modeler:'.$class.':' . $name, static::getDb()->{$name}(...$arguments));
     }
 
-    public function __call(string $name, array $arguments)
+    public function __call($name, $arguments)
     {
         return static::__callStatic($name, $arguments);
     }
@@ -421,7 +425,7 @@ class Modeler
             }
         }
 
-        return $db;
+        return $db->newQuery();
     }
 
     public static function getModelName(string $model)

@@ -1771,7 +1771,13 @@ value="'.static::getToken().'"
 
     public static function getMongoSession()
     {
-        return static::mongo()->startSession();
+        if (!$session = static::get('core_mongo_session')) {
+            $session = static::mongo()->startSession();
+
+            static::set('core_mongo_session', $session);
+        }
+
+        return $session;
     }
 
     public static function matches(string $needle, string $haystack): bool
@@ -1790,5 +1796,21 @@ value="'.static::getToken().'"
         }
 
         return static::class;
+    }
+
+    public static function callIn(object $object, string $method, ...$parameters)
+    {
+        return value(Closure::bind(function () use ($object, $method, $parameters) {
+            if (in_array($method, get_class_methods($object))) {
+                return $object->{$method}(...$parameters);
+            }
+
+            return $object->{$method};
+        }, null, get_class($object))->bindTo($object));
+    }
+
+    public static function sentry(): ?\Sentry\Laravel\Facade
+    {
+        return app('sentry');
     }
 }
