@@ -5,6 +5,7 @@ namespace Morbihanet\Modeler\Test;
 use Morbihanet\Modeler\Core;
 use Morbihanet\Modeler\Redis;
 use Morbihanet\Modeler\Store;
+use Morbihanet\Modeler\Modeler;
 use Morbihanet\Modeler\FileStore;
 use Jenssegers\Mongodb\Connection;
 use Morbihanet\Modeler\MemoryStore;
@@ -58,7 +59,7 @@ abstract class TestCase extends Orchestra
         $this->app['config']->set('mail.remote.url', '');
         $this->app['config']->set('mail.remote.key', '');
 
-        \Morbihanet\Modeler\Modeler::observeAll(ConsoleObserver::class);
+        Modeler::observeAll(ConsoleObserver::class);
     }
 
     public function tearDown(): void

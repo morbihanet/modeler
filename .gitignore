@@ -1,4 +1,5 @@
 /vendor
+/doctum
 /.git
 /.idea
 .env

@@ -26,7 +26,9 @@ class Proxy
      */
     public function __get($key)
     {
-        return $this->iterator->{$this->method}(function ($value) use ($key) {
+        $value = $this->iterator->{$this->method}();
+
+        return value(function () use ($value, $key) {
             return is_array($value) ? $value[$key] : $value->{$key};
         });
     }

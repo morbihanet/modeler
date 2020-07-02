@@ -32,6 +32,7 @@ RUN docker-php-ext-install pdo_sqlite
 RUN docker-php-ext-install mysqli
 RUN docker-php-ext-install tokenizer
 RUN docker-php-ext-install json
+RUN pecl install xdebug && docker-php-ext-enable xdebug
 
 RUN apt-get -y install libicu-dev
 RUN docker-php-ext-install -j$(nproc) intl

@@ -3,6 +3,7 @@ namespace Morbihanet\Modeler\Test;
 
 use Pagerfanta\Pagerfanta;
 use Morbihanet\Tools\Tool;
+use Morbihanet\Modeler\Di;
 use Morbihanet\Modeler\Api;
 use BadMethodCallException;
 use Morbihanet\Modeler\Swap;
@@ -39,6 +40,91 @@ class ModelerTest extends TestCase
     }
 
     /** @test */
+    public function it_should_be_proxyfiable()
+    {
+        Country::create(['name' => 'foo']);
+
+        $query = Country::where('name', 'foo');
+
+        $this->assertSame(1, $query->first->id);
+        $this->assertSame($query->avg('id'), $query->average('id'));
+    }
+
+    /** @test */
+    public function it_should_be_cachable()
+    {
+        Country::create(['name' => 'foo']);
+        Country::create(['name' => 'bar']);
+        Country::create(['name' => 'baz']);
+
+        $callable = function (Iterator $db) {
+            Core::incr('test_cache');
+
+            return $db->where('name', 'like', '%a%');
+        };
+
+        $query = Country::cacheFor($callable);
+
+        $this->assertSame(1, Core::get('test_cache'));
+        $this->assertSame(2, $query->count());
+
+        $query = Country::cacheFor($callable);
+
+        $this->assertSame(1, Core::get('test_cache'));
+        $this->assertSame(2, $query->count());
+    }
+
+    /** @test */
+    public function it_should_be_customizable()
+    {
+        $country = Country::create(['name' => 'bar']);
+        City::create(['name' => 'foo', 'country_id' => $country->getId()]);
+
+        $city = City::customize(function ($city) {
+            $city->test = 'bar';
+
+            return $city;
+        })->find(1);
+
+        $this->assertSame('bar', $city->test);
+
+        $count = City::customize(function ($city) {
+            $city->test = 'bar';
+
+            return $city;
+        })->where('name', 'foo')->count();
+
+        $this->assertSame(1, $count);
+    }
+
+    /** @test */
+    public function it_should_be_resolverable()
+    {
+        $this->assertSame(Core::alias($this, 'foo'), Core::make('foo'));
+        $this->assertTrue(Core::steal('foo')->isprivate(1));
+        $this->assertFalse(Core::steal('foo')->isprivate(0));
+        $this->assertSame(Core::make(Di::getInstance()), Core::steal(Di::class)->getInstance());
+    }
+
+    /** @test */
+    public function it_should_be_scopable()
+    {
+        $scope = Core::scope();
+        $scope['bar'] = 'baz';
+
+        $this->assertNull($scope['foo']);
+        $this->assertNull(Core::scope()['foo']);
+        $this->assertSame('baz', $scope['bar']);
+        $this->assertSame('baz', Core::scope()['bar']);
+        $this->assertNull(Core::scope('foo')['bar']);
+
+        unset($scope['bar']);
+
+        $this->assertNull($scope['bar']);
+        $this->assertNull(Core::scope()['bar']);
+    }
+
+    /** @test */
     public function it_should_be_table_facable()
     {
         Country::create(['name' => 'foo']);
@@ -48,6 +134,12 @@ class ModelerTest extends TestCase
         City::create(['name' => 'foo']);
         $this->assertSame(1, City::count());
         $this->assertSame(2, Country::count());
+
+        $first = City::first();
+        $first->foo = 'bar';
+        $first->save();
+
+        $this->assertSame('bar', City::first()->foo);
     }
 
     /** @test */

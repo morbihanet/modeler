@@ -161,12 +161,14 @@ class Db
     }
 
     /**
-     * @param array $data
+     * @param Item|array $data
      * @return Item
      */
-    public function model(array $data = []): Item
+    public function model($data = []): Item
     {
-        return $this->fire('model', Core::model($this, $data));
+        $item = !$data instanceof Item ? Core::model($this, $data) : $data;
+
+        return $this->fire('model', $item);
     }
 
     /**

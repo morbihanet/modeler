@@ -54,8 +54,8 @@ class Record implements \IteratorAggregate, \ArrayAccess, \Countable, Arrayable
      */
     public function each()
     {
-        foreach ($this->options as $option) {
-            yield $option;
+        foreach ($this->options as $key => $option) {
+            yield $key => $option;
         }
     }
 
@@ -109,7 +109,7 @@ class Record implements \IteratorAggregate, \ArrayAccess, \Countable, Arrayable
     /**
      * Return an entry.
      *
-     * @param $name
+     * @param string $name
      * @param  null       $default
      * @return null|mixed
      */
@@ -121,7 +121,7 @@ class Record implements \IteratorAggregate, \ArrayAccess, \Countable, Arrayable
     /**
      * Check that an entry exists.
      *
-     * @param $name
+     * @param string $name
      * @return bool
      */
     public function has($name)

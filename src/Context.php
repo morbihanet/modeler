@@ -11,8 +11,8 @@ class Context implements ArrayAccess
         Macroable::__call as macroCall;
     }
 
-    protected array $values = [];
-    protected string $context= 'core';
+    protected array $values   = [];
+    protected string $context = 'core';
 
     protected static array $instances = [];
 
@@ -172,9 +172,9 @@ class Context implements ArrayAccess
         if (substr($name, 0, 3) === 'get' && strlen($name) > 3) {
             $uncamelizeMethod   = Core::uncamelize(lcfirst(substr($name, 3)));
             $field              = Str::lower($uncamelizeMethod);
-            $def                = value(array_shift($arguments));
+            $def                = array_shift($arguments);
 
-            return $this->get($field, $def);
+            return $this[$field] ?? value($def);
         }
 
         if (substr($name, 0, 3) === 'has' && strlen($name) > 3) {
@@ -190,5 +190,7 @@ class Context implements ArrayAccess
 
             return $this->remove($field);
         }
+
+        return $this;
     }
 }

@@ -9,6 +9,7 @@ use Traversable;
 use ArrayIterator;
 use JsonSerializable;
 use IteratorAggregate;
+use ReflectionFunction;
 use Pagerfanta\Pagerfanta;
 use Illuminate\Support\Str;
 use Illuminate\Support\Collection;
@@ -331,7 +332,11 @@ class Iterator implements IteratorAggregate, Countable
             $row = $iterator->current();
 
             if ($this->model instanceof Db) {
-                return $this->model->model($this->withSelect($row));
+                if (!$row instanceof Item) {
+                    return $this->model->model($this->withSelect($row));
+                }
+
+                return $row;
             }
 
             return $row;
@@ -340,7 +345,9 @@ class Iterator implements IteratorAggregate, Countable
         foreach ($iterator as $key => $value) {
             if (app()->call($callback, [$value, $key])) {
                 if ($this->model instanceof Db) {
-                    return $this->model->model($this->withSelect($value));
+                    if (!$value instanceof Item) {
+                        return $this->model->model($this->withSelect($value));
+                    }
                 }
 
                 return $value;
@@ -360,7 +367,11 @@ class Iterator implements IteratorAggregate, Countable
         }
 
         foreach ($this as $row) {
-            yield $this->model->model($this->withSelect($row));
+            if (!$row instanceof Item) {
+                yield $this->model->model($this->withSelect($row));
+            } else {
+                yield $row;
+            }
         }
     }
 
@@ -374,7 +385,11 @@ class Iterator implements IteratorAggregate, Countable
         }
 
         foreach ($this as $row) {
-            yield $this->model->model($this->withSelect($row));
+            if (!$row instanceof Item) {
+                yield $this->model->model($this->withSelect($row));
+            } else {
+                yield $row;
+            }
         }
     }
 
@@ -1737,6 +1752,60 @@ class Iterator implements IteratorAggregate, Countable
         });
 
         return $instance->values();
+    }
+
+    public function cacheForever(Closure $callable): self
+    {
+        return $this->cacheFor($callable, '10 YEAR');
+    }
+
+    public function cacheFor(Closure $callable, $time = '2 HOUR'): self
+    {
+        $class = $this->model instanceof Db ? get_class($this->model) : get_called_class();
+
+        $rows = Core::cache($class)->setFor(Core::getClosureId($callable), function () use ($callable) {
+            $rows = [];
+
+            foreach ($callable($this) as $row) {
+                $rows[] = $row;
+            }
+
+            return $rows;
+        }, $time);
+
+        return $this->over(function () use ($rows) {
+            foreach ($rows as $row) {
+                if ($this->model instanceof Db) {
+                    yield $this->model->create($row);
+                } else {
+                    yield $row;
+                }
+            }
+        });
+    }
+
+    public function call(callable $callable): self
+    {
+        return $this->customize($callable);
+    }
+
+    public function customize(callable $callable): self
+    {
+        $model = $this->getModel();
+
+        if ($model instanceof Db) {
+            return $this->over(function () use ($callable, $model) {
+                foreach ($this as $row) {
+                    $value = $callable($model->create($row));
+
+                    if ($value) {
+                        yield $value;
+                    }
+                }
+            });
+        }
+
+        return $this;
     }
 
     public function insert(array $values): bool

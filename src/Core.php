@@ -10,17 +10,20 @@ use Faker\Factory;
 use MongoDB\Client;
 use ReflectionClass;
 use Faker\Generator;
+use Sentry\State\Hub;
 use ReflectionFunction;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use BadMethodCallException;
 use MongoDB\Driver\Manager;
 use Illuminate\Mail\Message;
+use Webmozart\Assert\Assert;
 use Illuminate\Mail\Markdown;
 use Illuminate\Support\Carbon;
 use Faker\Provider\fr_FR\Company;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Container\Container;
+use Illuminate\View\FileViewFinder;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Gate;
@@ -28,9 +31,12 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Faker\Provider\fr_FR\PhoneNumber;
 use Illuminate\Filesystem\Filesystem;
+use Illuminate\View\Engines\PhpEngine;
 use Illuminate\Database\QueryException;
 use Illuminate\Mail\Transport\Transport;
+use Illuminate\View\Factory as viewFactory;
 use Illuminate\Http\Client\Factory as Http;
+use Illuminate\View\Engines\EngineResolver;
 use Illuminate\Support\Facades\DB as DbMaster;
 use Illuminate\Validation\Factory as ValidatorFactory;
 use Symfony\Component\HttpFoundation\File\Exception\FileException;
@@ -599,7 +605,7 @@ class Core
         Closure $onFail,
         Closure $onSuccess,
         ?string $uuid = null) {
-        $uuid = $uuid === null ? Str::uuid()->toString() : $uuid;
+        $uuid = $uuid ?? Str::uuid()->toString();
 
         DbMaster::beginTransaction();
 
@@ -1348,21 +1354,35 @@ class Core
         }
     }
 
+    public static function scope(string $name = 'core'): Scope
+    {
+        if (!$scope = static::get('scope.' . $name)) {
+            $scope = new Scope($name);
+            static::set('scope.' . $name, $scope);
+        }
+
+        return $scope;
+    }
+
     /**
      * @param null|string $name
      * @return string
      */
     public static function bearer(?string $name = null): string
     {
-        $name = $name ?? config('modeler.cookie_name', 'app_bearer');
+        if (!headers_sent()) {
+            $name = $name ?? config('modeler.cookie_name', 'app_bearer');
 
-        if (!$cookie = Arr::get($_COOKIE, $name)) {
-            $cookie = sha1(uniqid(sha1(uniqid(null, true)), true));
+            if (!$cookie = Arr::get($_COOKIE, $name)) {
+                $cookie = sha1(uniqid(sha1(uniqid(null, true)), true));
+            }
+
+            setcookie($name, $cookie, strtotime('+1 year'), '/');
+
+            return $cookie;
         }
 
-        setcookie($name, $cookie, strtotime('+1 year'), '/');
-
-        return $cookie;
+        return sha1_file(__FILE__);
     }
 
     /**
@@ -1619,6 +1639,31 @@ value="'.static::getToken().'"
         return Container::getInstance()->make(Markdown::class);
     }
 
+    public static function steal($subject, ?string $alias = null)
+    {
+        return static::bind(static::make($subject, $alias));
+    }
+
+    public static function alias($subject, string $alias)
+    {
+        return static::make($subject, $alias);
+    }
+
+    public static function make($subject, ?string $alias = null)
+    {
+        if (is_object($subject)) {
+            $name = $alias ?? get_class($subject);
+
+            return static::set('resolved_' . $name, $subject);
+        }
+
+        if (static::has('resolved_' . $subject)) {
+            return static::get('resolved_' . $subject);
+        }
+
+        return static::app()->bound($subject) ? static::app()[$subject] : null;
+    }
+
     public static function getMock($class)
     {
         if (is_object($class)) {
@@ -1798,6 +1843,33 @@ value="'.static::getToken().'"
         return static::class;
     }
 
+    public static function cache(string $namespace = 'core')
+    {
+        return Warehouse::make(str_replace('\\', '', $namespace) . 'Cache');
+    }
+
+    public static function getReflectedCode(ReflectionFunction $reflection): string
+    {
+        $code = '';
+
+        $lines = file($reflection->getFileName());
+
+        for ($i = $reflection->getStartLine(); $i < $reflection->getEndLine() - 1; ++$i) {
+            $line = $lines[$i];
+
+            if ("\n" !== $line && "\r" !== $line && "\r\n" !== $line && "\t" !== $line) {
+                $code .= $line;
+            }
+        }
+
+        return $code;
+    }
+
+    public static function getClosureId(Closure $callable)
+    {
+        return sha1(static::getReflectedCode(new ReflectionFunction($callable)));
+    }
+
     public static function callIn(object $object, string $method, ...$parameters)
     {
         return value(Closure::bind(function () use ($object, $method, $parameters) {
@@ -1809,8 +1881,35 @@ value="'.static::getToken().'"
         }, null, get_class($object))->bindTo($object));
     }
 
-    public static function sentry(): ?\Sentry\Laravel\Facade
+    public static function sentry(): ?Hub
     {
         return app('sentry');
+    }
+
+    public static function createLocalViewFactory(array $paths): viewFactory
+    {
+        $resolver = new EngineResolver();
+
+        $resolver->register('php', function () {
+            return new PhpEngine();
+        });
+
+        $finder = new FileViewFinder(app('files'), $paths);
+        $factory = new viewFactory($resolver, $finder, app('fileventses'));
+        $factory->addExtension('php', 'php');
+
+        return $factory;
+    }
+
+    public static function __callStatic(string $name, array $arguments)
+    {
+        if ('assert' === substr($name, 0, 6)) {
+            $method = lcfirst(substr($name, 6));
+            Assert::{$method}(...$arguments);
+        } else {
+            if (static::app()->bound($name)) {
+                return app($name);
+            }
+        }
     }
 }

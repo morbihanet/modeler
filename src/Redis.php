@@ -157,9 +157,7 @@ use Predis\Client as Predis;
 
 class Redis
 {
-    /** @var null|Predis */
     protected static $engine = null;
-
     protected static ?Redis $instance = null;
 
     /**
@@ -184,10 +182,10 @@ class Redis
     /**
      * @param string $key
      * @param mixed $value
-     * @param string $time
+     * @param string|int $time
      * @return mixed|null
      */
-    public static function for(string $key, $value, string $time = '1 DAY')
+    public static function for(string $key, $value, $time = '1 DAY')
     {
         $k = 'rfor.' . $key;
 
@@ -195,7 +193,9 @@ class Redis
             return unserialize($row);
         }
 
-        $expire = strtotime('+' . $time) - time();
+        $max = is_string($time) ? strtotime('+' . $time) : $time;
+
+        $expire = $max - time();
 
         static::setex($k, $expire, serialize($computed = value($value)));
 
@@ -205,12 +205,12 @@ class Redis
     /**
      * @param string $key
      * @param $value
-     * @param string $time
+     * @param string|int $time
      * @return mixed|null
      */
-    public static function setFor(string $key, $value, string $time = '1 DAY')
+    public static function setFor(string $key, $value, $time = '1 DAY')
     {
-        $max = strtotime('+' . $time);
+        $max = is_string($time) ? strtotime('+' . $time) : $time;
         $now = time();
 
         if ($row = static::hget('rsetfor', $key)) {

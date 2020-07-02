@@ -1,6 +1,7 @@
 <?php
 namespace Morbihanet\Modeler;
 
+use Closure;
 use ArrayAccess;
 use Symfony\Component\Yaml\Yaml;
 use Illuminate\Support\Collection;
@@ -19,6 +20,17 @@ class Warehouse extends Model implements ArrayAccess
     protected $dates          = ['called_at'];
     protected static $memory  = [];
     protected static $cleaned = [];
+
+    public function __construct(array $attributes = [], string $namespace = 'core')
+    {
+        parent::__construct($attributes);
+        $this->setNamespace($namespace);
+    }
+
+    public static function make(string $namespace = 'core', array $attributes = []): self
+    {
+        return new static($attributes, $namespace);
+    }
 
     public static function boot()
     {
@@ -256,6 +268,114 @@ class Warehouse extends Model implements ArrayAccess
         return $this;
     }
 
+    public function add(string $key, $value, int $seconds = 0): self
+    {
+        if (!$this->__isset($key)) {
+            $this->expire($key, $value, $seconds / 60);
+        }
+
+        return $this;
+    }
+
+    public function missing(string $key)
+    {
+        return !$this->__isset($key);
+    }
+
+    public function putMany(array $values, int $seconds = 0)
+    {
+        foreach ($values as $key => $value) {
+            $this->put($key, $value, $seconds);
+        }
+
+        return true;
+    }
+
+    public function remember(string $key, int $minutes, $callback)
+    {
+        if ('mambodummy' === ($value = $this->getOr($key, 'mambodummy'))) {
+            $this->expire($key, $value = value($callback), $minutes);
+        }
+
+        return $value;
+    }
+
+    public function until(string $name, Closure $closure, int $timestamp, ...$args)
+    {
+        $db     = static::make('untils');
+        $row    = $db->getOr($name, []);
+
+        $when    = $row['when'] ?? null;
+        $value   = $row['value'] ?? 'mambodummy';
+
+        if (null !== $when && 'mambodummy' !== $value) {
+            $when = (int) $when;
+
+            if ($timestamp === $when) {
+                return $value;
+            }
+        }
+
+        $data = $closure(...$args);
+
+        $row['when'] = $timestamp;
+        $row['value'] = $data;
+        $db[$name] = $row;
+
+        return $data;
+    }
+
+    public function sear(string $key, $callback)
+    {
+        if ('mambodummy' === ($value = $this->getOr($key, 'mambodummy'))) {
+            $value = value($callback);
+            $this[$key] = $value;
+        }
+
+        return $value;
+    }
+
+    public function forget($key): bool
+    {
+        if (true === ($status = $this->__isset($key))) {
+            unset($this[$key]);
+        }
+
+        return $status;
+    }
+
+    public function merge(array $options): self
+    {
+        return $this->setMany(array_merge($this->toArray(), $options));
+    }
+
+    public function setMany(array $keys, int $expire = 0): self
+    {
+        foreach ($keys as $arrayKey => $arrayValue) {
+            $this->expire($arrayKey, $arrayValue, $expire);
+        }
+
+        return $this;
+    }
+
+    public function setMultiple(array $values, int $seconds = 0)
+    {
+        return $this->putMany($values, $seconds);
+    }
+
+    public function setFor(string $key, $value, $time = '1 DAY')
+    {
+        $val = $this[$key] ?? null;
+
+        if (null === $val) {
+            $max = is_string($time) ? strtotime('+' . $time) : $time;
+            $seconds = $max - time();
+            $this->expire($key, $val = value($value), $seconds / 60);
+        }
+
+        return $val;
+    }
+
     /**
      * @param mixed $offset
      * @param mixed $value
@@ -275,6 +395,36 @@ class Warehouse extends Model implements ArrayAccess
         $this->getConnection()->transaction(function () use ($rows) {
             static::insert($rows);
         }, 1);
+    }
+
+    public function getOr(string $key, $otherwise = null)
+    {
+        return $this[$key] ?? value($otherwise);
+    }
+
+    public function pull(string $key, $default = null)
+    {
+        return tap($this->getOr($key, $default), function () use ($key) {
+            unset($this[$key]);
+        });
+    }
+
+    public function put(string $key, $value, $seconds = 0)
+    {
+        $this->expire($key, $value, $seconds / 60);
+
+        return true;
+    }
+
+    public function many(array $keys)
+    {
+        $results = [];
+
+        foreach ($keys as $key) {
+            $results[$key] = $this[$key] ?? null;
+        }
+
+        return $results;
     }
 
     /**
@@ -322,6 +472,15 @@ class Warehouse extends Model implements ArrayAccess
         }
 
         return $collection;
+    }
+
+    public function iterator()
+    {
+        return Core::iterator(function () {
+            foreach($this->keys() as $key) {
+                yield $this[$key];
+            }
+        });
     }
 
     /**

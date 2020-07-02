@@ -183,13 +183,14 @@ class Cache implements Store, ArrayAccess, Countable
     /**
      * @param string $key
      * @param $value
-     * @param string $time
+     * @param string|int $time
      * @return mixed|null
      */
-    public function setFor(string $key, $value, string $time = '1 DAY')
+    public function setFor(string $key, $value, $time = '1 DAY')
     {
         if (null === ($val = $this->get($key))) {
-            $seconds = strtotime('+' . $time) - time();
+            $max = is_string($time) ? strtotime('+' . $time) : $time;
+            $seconds = $max - time();
             $this->store->expire($key, $val = value($value), $seconds / 60);
         }
 
@@ -542,8 +543,13 @@ class Cache implements Store, ArrayAccess, Countable
     public function each()
     {
         foreach ($this->toArray() as $key => $value) {
-            yield [$key => $value];
+            yield $key => $value;
         }
+    }
+
+    public function iterator()
+    {
+        return Core::iterator([$this, 'each']);
     }
 
     /**

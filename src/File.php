@@ -3,7 +3,11 @@ namespace Morbihanet\Modeler;
 
 use Illuminate\Support\Arr;
 use Illuminate\Filesystem\Filesystem;
+use Symfony\Component\HttpFoundation\File\File as Base;
 
+/**
+ * @@mixin Filesystem
+ */
 class File
 {
     public static function saveForever(string $key, $value)
@@ -14,15 +18,15 @@ class File
     public static function saveFor(string $key, $value, string $time = '1 DAY')
     {
         $max    = strtotime('+' . $time);
-        $file   = static::makeCache($key, $files  = app('files'));
+        $file   = static::makeCache($key, static::getInstance());
 
         $now = time();
 
-        if ($files->isFile($file)) {
-            $content = unserialize($files->get($file));
+        if (static::isFile($file)) {
+            $content = unserialize(static::get($file));
 
             if (Arr::get($content, 'time', $now - 1) < $now) {
-                $files->delete($file);
+                static::delete($file);
             } else {
                 return Arr::get($content, 'data');
             }
@@ -30,7 +34,7 @@ class File
 
         $content = ['date' => date('d/m/Y H:i:s', $max), 'time' => $max, 'data' => $computed = v($value)];
 
-        $files->put($file, serialize($content));
+        static::put($file, serialize($content));
 
         return $computed;
     }
@@ -51,22 +55,21 @@ class File
 
     public static function saveUntil(string $key, int $timestamp, $value = null)
     {
-        $files  = app('files');
-        $file   = static::makeCache($key, $files);
+        $file   = static::makeCache($key, static::getInstance());
 
-        if ($files->isFile($file)) {
+        if (static::isFile($file)) {
             $age = filemtime($file);
 
             if ($age < $timestamp) {
-                $files->delete($file);
+                static::delete($file);
             } else {
-                $content = unserialize($files->get($file));
+                $content = unserialize(static::get($file));
 
                 return $content;
             }
         }
 
-        $files->put($file, serialize($computed = value($value)));
+        static::put($file, serialize($computed = value($value)));
         touch($file, $timestamp);
 
         return $computed;
@@ -77,17 +80,18 @@ class File
         $dir = storage_path('files');
 
         $hash = sha1($key);
+        $ds = DIRECTORY_SEPARATOR;
 
         for ($i = 0; $i <= 6; $i += 2) {
-            $dir .= DIRECTORY_SEPARATOR . substr($hash, $i, 2);
+            $dir .= $ds . substr($hash, $i, 2);
         }
 
-        $file = $dir . DIRECTORY_SEPARATOR . $hash . '.cache';
+        $file = $dir . $ds . $hash . '.cache';
 
         if (null !== $files) {
-            $parts = explode(DIRECTORY_SEPARATOR, $file);
+            $parts = explode($ds, $file);
             array_pop($parts);
-            $dir = implode(DIRECTORY_SEPARATOR, $parts);
+            $dir = implode($ds, $parts);
 
             if (!$files->isDirectory($dir)) {
                 $files->makeDirectory($dir, 0777, true, true);
@@ -95,5 +99,46 @@ class File
         }
 
         return $file;
+    }
+
+    public static function putHash(string $dir, string $hash, string $data, string $extension, bool $replace = true)
+    {
+        $path = $dir;
+        $ds = DIRECTORY_SEPARATOR;
+
+        for ($i = 0; $i <= 6; $i += 2) {
+            $path .= $ds . substr($hash, $i, 2);
+        }
+
+        $file = $path . $ds . $hash . '.' . $extension;
+
+        if (!static::isDirectory($path)) {
+            static::makeDirectory($path, 0777, true, true);
+        } else {
+            if (static::exists($file) && $replace) {
+                static::delete($file);
+            }
+        }
+
+        if (!static::exists($file)) {
+            static::put($file, $data);
+        }
+
+        return $file;
+    }
+
+    public static function info(string $path)
+    {
+        return new Base($path);
+    }
+
+    public static function getInstance(): Filesystem
+    {
+        return app('files');
+    }
+
+    public static function __callStatic(string $name, array $arguments)
+    {
+        return static::getInstance()->{$name}(...$arguments);
     }
 }

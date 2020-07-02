@@ -11,7 +11,7 @@ class Sentry extends Handler
 
         if ($e) {
             if ($sentry = Core::sentry()) {
-                $sentry::captureException($e);
+                $sentry->captureException($e);
             }
         }
     }
