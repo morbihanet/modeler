@@ -6,6 +6,7 @@ use Morbihanet\Tools\Tool;
 use Morbihanet\Modeler\Di;
 use Morbihanet\Modeler\Api;
 use BadMethodCallException;
+use Morbihanet\Modeler\Acl;
 use Morbihanet\Modeler\Swap;
 use Morbihanet\Modeler\Core;
 use Morbihanet\Modeler\Able;
@@ -37,6 +38,50 @@ class ModelerTest extends TestCase
     private function isprivate(bool $a)
     {
         return true && $a;
+    }
+
+    /** @test */
+    public function it_should_be_aclable()
+    {
+        $rules = [
+            'guest' => [
+                'resources' => [
+                    User::class => [
+                        'create',
+                        'read',
+                        'update',
+                    ],
+                    'foo' => [
+                        'create' => function () {
+                            return true;
+                        }
+                    ],
+                ],
+            ],
+            'admin' => [
+                'resources' => [
+                    User::class => '*',
+                    'foo' => '*',
+                ],
+            ],
+            'superadmin' => '*',
+        ];
+
+        $acl = Core::acl()->setRules($rules);
+
+        $this->assertTrue($acl->check('admin', 'create', User::class));
+        $this->assertTrue($acl->check('admin', 'delete', User::class));
+        $this->assertTrue($acl->check('superadmin', 'create', User::class));
+        $this->assertTrue($acl->check('superadmin', 'delete', User::class));
+        $this->assertTrue($acl->check('guest', 'create', User::class));
+        $this->assertFalse($acl->check('guest', 'delete', User::class));
+        $this->assertTrue($acl->check('admin', 'create', 'foo'));
+        $this->assertTrue($acl->check('guest', 'create', 'foo'));
+        $this->assertTrue($acl->check('superadmin', 'create', 'foo'));
+        $this->assertTrue($acl->check('superadmin', 'create', 'bar'));
+        $this->assertFalse($acl->check('admin', 'create', 'bar'));
+        $this->assertFalse($acl->check('guest', 'create', 'bar'));
+        $this->assertFalse($acl->check('baz', 'create', 'foo'));
     }
 
     /** @test */
@@ -450,6 +495,7 @@ class ModelerTest extends TestCase
 
         $this->assertSame(3, Able::fetch('image')->count());
         $this->assertSame(2, Able::where('class_model', 'tv')->count());
+        $this->assertSame(1, Able::where('class_model', 'computer')->count());
     }
 
     /** @test */

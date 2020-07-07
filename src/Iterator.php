@@ -1918,6 +1918,10 @@ class Iterator implements IteratorAggregate, Countable
      */
     public function __call($name, $arguments)
     {
+        if (static::hasMacro($name)) {
+            return $this->macroCall($name, $arguments);
+        }
+
         $model = $this->getModel();
         $modelActions = ['save', 'delete'];
 
@@ -1927,9 +1931,7 @@ class Iterator implements IteratorAggregate, Countable
             return $model->{$method}(...$arguments);
         }
 
-        if (self::hasMacro($name)) {
-            return $this->macroCall($name, $arguments);
-        }
+        $uncamelized = Core::uncamelize($name);
 
         if ($modeler = Core::get('modeler')) {
             if (in_array($name, get_class_methods($modeler))) {
@@ -1938,7 +1940,7 @@ class Iterator implements IteratorAggregate, Countable
                 return (new $modeler)->{$name}(...$args);
             }
 
-            $methodModeler = Str::camel('scope_' . Core::uncamelize($name));
+            $methodModeler = Str::camel('scope_' . $uncamelized);
 
             if (in_array($methodModeler, get_class_methods($modeler))) {
                 $args = array_merge([$this], $arguments);
@@ -1948,26 +1950,29 @@ class Iterator implements IteratorAggregate, Countable
         }
 
         if (fnmatch('where*', $name) && strlen($name) > 5) {
-            if (fnmatch('where_*', $uncamelized = Core::uncamelize($name))) {
-                $name = 'where';
+            if (fnmatch('where_*', $uncamelized)) {
                 $arguments = array_merge([str_replace('where_', '', $uncamelized)], $arguments);
+
+                return $this->where(...$arguments);
             }
         }
 
         if (fnmatch('has*', $name) && strlen($name) > 3) {
-            if (fnmatch('has_*', $uncamelized = Core::uncamelize($name))) {
-                $name = 'where';
+            if (fnmatch('has_*', $uncamelized)) {
                 $arguments = array_merge([str_replace('has_', '', $uncamelized . '_id'), '>', 0], $arguments);
+
+                return $this->where(...$arguments);
             }
         }
 
         if (fnmatch('doesntHave*', $name) && strlen($name) > 10) {
-            if (fnmatch('doesnt_have_*', $uncamelized = Core::uncamelize($name))) {
-                $name = 'where';
+            if (fnmatch('doesnt_have_*', $uncamelized)) {
                 $arguments = array_merge(
-                    [str_replace('doesnt_have_', '', $uncamelized . '_id'), 'is', null],
+                    [str_replace('doesnt_have_', '', $uncamelized . '_id'), '<', 1],
                     $arguments
                 );
+
+                return $this->where(...$arguments);
             }
         }
 

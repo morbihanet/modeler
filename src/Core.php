@@ -281,6 +281,11 @@ class Core
         return null;
     }
 
+    public static function acl(string $namespace = 'core'): Acl
+    {
+        return Acl::getInstance($namespace);
+    }
+
     /**
      * @param mixed $closure
      * @param mixed ...$args
