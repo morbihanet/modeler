@@ -3,17 +3,16 @@ namespace Morbihanet\Modeler;
 
 trait Morphable
 {
-    public function morphOne(string $morphClass, string $morphName)
+    public function morphOne(string $morphClass, string $morphName): Item
     {
-        return $morphClass::where($morphName, get_class(Core::getDb($this)))
+        return $morphClass::where($morphName, get_class($this))
             ->where($morphName . '_id', $this['id'])
             ->first();
     }
 
-    public function morphMany(string $morphClass, string $morphName)
+    public function morphMany(string $morphClass, string $morphName): Iterator
     {
-        return $morphClass::where($morphName, get_class(Core::getDb($this)))
-            ->where($morphName . '_id', $this['id'])
-            ->cursor();
+        return $morphClass::where($morphName, get_class($this))
+            ->where($morphName . '_id', $this['id']);
     }
 }

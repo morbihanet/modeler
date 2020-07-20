@@ -1,6 +1,9 @@
 <?php
 namespace Morbihanet\Modeler;
 
+use PDO;
+use Closure;
+use Throwable;
 use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -42,7 +45,7 @@ class Store extends Db
     }
 
     /**
-     * @return \PDO
+     * @return PDO
      */
     protected function getPdo()
     {
@@ -50,12 +53,12 @@ class Store extends Db
     }
 
     /**
-     * @param \Closure $callback
+     * @param Closure $callback
      * @param int $attempts
      * @return mixed
-     * @throws \Throwable
+     * @throws Throwable
      */
-    public function transaction(\Closure $callback, $attempts = 1)
+    public function transaction(Closure $callback, $attempts = 1)
     {
         return $this->__store->getConnection()->transaction($callback, $attempts);
     }
@@ -189,7 +192,7 @@ class Store extends Db
     /**
      * @return bool
      */
-    public function clearCache()
+    public function clearCache(): bool
     {
         $min = date('Y-m-d H:i:s', time() - config('modeler.cache_ttl', 24 * 3600));
 

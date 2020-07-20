@@ -6,7 +6,6 @@ use Morbihanet\Tools\Tool;
 use Morbihanet\Modeler\Di;
 use Morbihanet\Modeler\Api;
 use BadMethodCallException;
-use Morbihanet\Modeler\Acl;
 use Morbihanet\Modeler\Swap;
 use Morbihanet\Modeler\Core;
 use Morbihanet\Modeler\Able;
@@ -38,6 +37,17 @@ class ModelerTest extends TestCase
     private function isprivate(bool $a)
     {
         return true && $a;
+    }
+
+    /** @test */
+    public function it_should_be_notifiable()
+    {
+        $country = Country::create(['name' => 'foo']);
+        $country->notify(['bar' => 'baz']);
+
+        $this->assertSame(1, $country->notifications()->count());
+        $this->assertSame($country->unreadNotifications()->count(), $country->notifications()->count());
+        $this->assertSame(0, $country->readNotifications()->count());
     }
 
     /** @test */
@@ -138,6 +148,16 @@ class ModelerTest extends TestCase
 
             return $city;
         })->where('name', 'foo')->count();
+
+        $this->assertSame(1, $count);
+
+        $this->assertSame(0, City::whereTest('bar')->count());
+
+        $count = City::customize(function (Item $city) {
+            $city->test = 'bar';
+
+            return $city;
+        })->whereTest('bar')->count();
 
         $this->assertSame(1, $count);
     }

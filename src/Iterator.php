@@ -9,7 +9,6 @@ use Traversable;
 use ArrayIterator;
 use JsonSerializable;
 use IteratorAggregate;
-use ReflectionFunction;
 use Pagerfanta\Pagerfanta;
 use Illuminate\Support\Str;
 use Illuminate\Support\Collection;
@@ -52,14 +51,11 @@ class Iterator implements IteratorAggregate, Countable
     /** @var mixed */
     protected $scope;
 
-    /** @var Db|null */
-    protected $model;
+    protected ?Db $model = null;
 
-    /** @var array */
-    protected static $queries = [];
+    protected static array $queries = [];
 
-    /** @var array */
-    protected static $proxies = [
+    protected static array $proxies = [
         'average', 'avg', 'contains', 'each', 'every', 'filter', 'first',
         'flatMap', 'groupBy', 'keyBy', 'map', 'max', 'min', 'partition',
         'reject', 'some', 'sortBy', 'sortByDesc', 'sum', 'unique',
@@ -129,7 +125,7 @@ class Iterator implements IteratorAggregate, Countable
         });
     }
 
-    public function remove($id, string $key = 'id')
+    public function remove($id, string $key = 'id'): self
     {
         return $this->filter(function ($item) use ($id, $key) {
             if ($id instanceof Item && $item instanceof Item) {
@@ -168,33 +164,21 @@ class Iterator implements IteratorAggregate, Countable
         return (array) $items;
     }
 
-    /**
-     * @return array
-     */
     public static function getQueries(): array
     {
         return static::$queries;
     }
 
-    /**
-     * @return Collection
-     */
-    public function collect()
+    public function collect(): Collection
     {
         return collect($this->toArray());
     }
 
-    /**
-     * @return Iterator
-     */
-    public static function empty()
+    public static function empty(): self
     {
         return (new static([]));
     }
 
-    /**
-     * @return bool
-     */
     public function isEmpty(): bool
     {
         return 0 === $this->count();
@@ -205,9 +189,6 @@ class Iterator implements IteratorAggregate, Countable
         return $this->toArray();
     }
 
-    /**
-     * @return array
-     */
     public function toArray(): array
     {
         if (is_array($this->scope)) {
@@ -227,21 +208,11 @@ class Iterator implements IteratorAggregate, Countable
         return $this->toJson();
     }
 
-    /**
-     * @param  string  $method
-     * @return void
-     */
     public static function proxify(string $method): void
     {
         static::$proxies[] = $method;
     }
 
-    /**
-     * @param  string  $key
-     * @return mixed
-     *
-     * @throws \Exception
-     */
     public function __get($key)
     {
         if (!in_array($key, static::$proxies)) {
@@ -251,11 +222,7 @@ class Iterator implements IteratorAggregate, Countable
         return new Proxy($this, $key);
     }
 
-    /**
-     * @param callable|null $callback
-     * @return Iterator
-     */
-    public function filter(?callable $callback = null)
+    public function filter(?callable $callback = null): self
     {
         if (is_null($callback)) {
             $callback = function ($value) {
@@ -272,11 +239,7 @@ class Iterator implements IteratorAggregate, Countable
         });
     }
 
-    /**
-     * @param string $pattern
-     * @return Iterator
-     */
-    public function pattern(string $pattern = '*')
+    public function pattern(string $pattern = '*'): self
     {
         return $this->over(function () use ($pattern) {
             foreach ($this as $key => $value) {
@@ -287,12 +250,7 @@ class Iterator implements IteratorAggregate, Countable
         });
     }
 
-    /**
-     * @param $from
-     * @param $to
-     * @return Iterator
-     */
-    public static function range($from, $to)
+    public static function range($from, $to): self
     {
         return new static(function () use ($from, $to) {
             while ($from <= $to) {
@@ -316,8 +274,6 @@ class Iterator implements IteratorAggregate, Countable
     }
 
     /**
-     * @param callable|null $callback
-     * @param null $default
      * @return Item|mixed|null
      */
     public function first(callable $callback = null, $default = null)
@@ -375,9 +331,6 @@ class Iterator implements IteratorAggregate, Countable
         }
     }
 
-    /**
-     * @return \Generator
-     */
     public function get()
     {
         if (!$this->model instanceof Db) {
@@ -402,9 +355,6 @@ class Iterator implements IteratorAggregate, Countable
         return $row;
     }
 
-    /**
-     * @return int
-     */
     public function destroy(): int
     {
         $i = 0;
@@ -419,9 +369,6 @@ class Iterator implements IteratorAggregate, Countable
         return $i;
     }
 
-    /**
-     * @return int
-     */
     public function detach(Item $item): int
     {
         $i = 0;
@@ -436,9 +383,6 @@ class Iterator implements IteratorAggregate, Countable
         return $i;
     }
 
-    /**
-     * @return int
-     */
     public function attach(Item $item, array $attributes = []): int
     {
         $i = 0;
@@ -453,9 +397,6 @@ class Iterator implements IteratorAggregate, Countable
         return $i;
     }
 
-    /**
-     * @return int
-     */
     public function sync(Item $item, array $attributes = []): int
     {
         $i = 0;
@@ -470,10 +411,6 @@ class Iterator implements IteratorAggregate, Countable
         return $i;
     }
 
-    /**
-     * @param array $conditions
-     * @return int
-     */
     public function update(array $conditions): int
     {
         $i = 0;
@@ -488,25 +425,17 @@ class Iterator implements IteratorAggregate, Countable
         return $i;
     }
 
-    /**
-     * @return bool
-     */
     public function exists(): bool
     {
         return $this->count() > 0;
     }
 
-    /**
-     * @return bool
-     */
     public function notExists(): bool
     {
         return !$this->exists();
     }
 
     /**
-     * @param callable|null $callback
-     * @param null $default
      * @return mixed|Item|null
      */
     public function last(?callable $callback = null, $default = null)
@@ -521,11 +450,6 @@ class Iterator implements IteratorAggregate, Countable
         })->first($callback, $default);
     }
 
-
-    /**
-     * @param callable $callback
-     * @return Iterator
-     */
     public function tap(callable $callback): self
     {
         return $this->over(function () use ($callback) {
@@ -537,11 +461,7 @@ class Iterator implements IteratorAggregate, Countable
         });
     }
 
-    /**
-     * @param $limit
-     * @return Iterator
-     */
-    public function take($limit): self
+    public function take(int $limit): self
     {
         if ($limit < 0) {
             return $this->exec('take', func_get_args());
@@ -562,11 +482,7 @@ class Iterator implements IteratorAggregate, Countable
         });
     }
 
-    /**
-     * @param $size
-     * @return Iterator
-     */
-    public function chunk($size): self
+    public function chunk(int $size): self
     {
         if ($size <= 0) {
             return static::empty();
@@ -599,11 +515,6 @@ class Iterator implements IteratorAggregate, Countable
         });
     }
 
-    /**
-     * @param int $page
-     * @param int $perPage
-     * @return Iterator
-     */
     public function forPage(int $page = 1, int $perPage = 15): self
     {
         if (1 === $page) {
@@ -649,11 +560,6 @@ class Iterator implements IteratorAggregate, Countable
         return $default;
     }
 
-    /**
-     * @param $offset
-     * @param null $length
-     * @return Iterator
-     */
     public function slice($offset, $length = null): self
     {
         if ($offset < 0 || $length < 0) {
@@ -669,10 +575,6 @@ class Iterator implements IteratorAggregate, Countable
         return is_null($length) ? $instance : $instance->take($length);
     }
 
-    /**
-     * @param int $count
-     * @return Iterator
-     */
     public function skip(int $count): self
     {
         return $this->over(function () use ($count) {
@@ -691,11 +593,6 @@ class Iterator implements IteratorAggregate, Countable
         });
     }
 
-    /**
-     * @param  string|array  $value
-     * @param  string|null  $key
-     * @return Iterator
-     */
     public function pluck($value, ?string $key = null): self
     {
         return $this->over(function () use ($value, $key) {
@@ -719,10 +616,6 @@ class Iterator implements IteratorAggregate, Countable
         });
     }
 
-    /**
-     * @param callable $callback
-     * @return Iterator
-     */
     public function map(callable $callback): self
     {
         return $this->over(function () use ($callback) {
@@ -758,10 +651,6 @@ class Iterator implements IteratorAggregate, Countable
         });
     }
 
-    /**
-     * @param Closure $callback
-     * @return Iterator
-     */
     public function over(Closure $callback): self
     {
         return (new static($callback->bindTo($this)))->setModel($this->getModel());
@@ -777,11 +666,6 @@ class Iterator implements IteratorAggregate, Countable
         return $this->where($key, $value)->first();
     }
 
-    /**
-     * @param $key
-     * @param $value
-     * @return Iterator
-     */
     public function findBy($key, $value = null): self
     {
         if (is_array($key) && null === $value) {
@@ -858,9 +742,6 @@ class Iterator implements IteratorAggregate, Countable
         return Core::iterator($this->getModel()->getResolver())->setModel($this->getModel());
     }
 
-    /**
-     * @return Iterator
-     */
     public function orWhere(): self
     {
         $wheres = func_get_args();
@@ -903,12 +784,6 @@ class Iterator implements IteratorAggregate, Countable
         return $this->exec('sortBy', [$column, $sorting, $descending]);
     }
 
-    /**
-     * @param $key
-     * @param string|null $operator
-     * @param null $value
-     * @return Iterator
-     */
     public function where($key, $operator = null, $value = null): self
     {
         $isCallable = false;
@@ -933,7 +808,7 @@ class Iterator implements IteratorAggregate, Countable
 
         if (true === $isCallable) {
             return $this->filter(function($item) use ($key) {
-                if ($key instanceof \Closure) {
+                if ($key instanceof Closure) {
                     return $key($item);
                 } elseif (is_array($key)) {
                     return app()->call($key, [$item]);
@@ -965,10 +840,6 @@ class Iterator implements IteratorAggregate, Countable
         });
     }
 
-    /**
-     * @param $conditions
-     * @return Iterator
-     */
     public function search($conditions): self
     {
         $conditions = Core::arrayable($conditions) ? $conditions->toArray() : $conditions;
@@ -980,14 +851,9 @@ class Iterator implements IteratorAggregate, Countable
         return $this;
     }
 
-    /**
-     * @param Item $item
-     * @return bool
-     */
     public function contains(Item $item): bool
     {
-        $db = Core::getDb($item);
-        $fk = $db->getConcern(get_class($item)) . '_id';
+        $fk = Core::getDb($item)->getConcern(get_class($item)) . '_id';
 
         foreach ($this as $row) {
             $value = (int) $row[$fk] ?? 0;
@@ -1000,559 +866,281 @@ class Iterator implements IteratorAggregate, Countable
         return false;
     }
 
-    /**
-     * @param Item $item
-     * @return bool
-     */
     public function notContains(Item $item): bool
     {
         return !$this->contains($item);
     }
 
-    /**
-     * @param string $field
-     * @param $value
-     * @return Iterator
-     */
     public function likeI(string $field, $value): self
     {
         return $this->where($field, 'like i', $value);
     }
 
-    /**
-     * @param string $field
-     * @param $value
-     * @return Iterator
-     */
     public function orLikeI(string $field, $value): self
     {
         return $this->orWhere($field, 'like i', $value);
     }
 
-    /**
-     * @param string $field
-     * @param $value
-     * @return $this|Iterator
-     */
     public function notLikeI(string $field, $value): self
     {
         return $this->where($field, 'not like i', $value);
     }
 
-    /**
-     * @param string $field
-     * @param $value
-     * @return Iterator
-     */
     public function orNotLikeI(string $field, $value): self
     {
         return $this->orWhere($field, 'not like i', $value);
     }
 
-    /**
-     * @param string $field
-     * @param $value
-     * @return Iterator
-     */
     public function like(string $field, $value): self
     {
         return $this->where($field, 'like', $value);
     }
 
-    /**
-     * @param string $field
-     * @param $value
-     * @return Iterator
-     */
     public function whereLike(string $field, $value): self
     {
         return $this->where($field, 'like', $value);
     }
 
-    /**
-     * @param $field
-     * @param $value
-     * @return Iterator
-     */
     public function orLike(string $field, $value): self
     {
         return $this->orWhere($field, 'like', $value);
     }
 
-    /**
-     * @param string $field
-     * @param $value
-     * @return Iterator
-     */
     public function notLike(string $field, $value): self
     {
         return $this->where($field, 'not like', $value);
     }
 
-
-    /**
-     * @param string $field
-     * @param $value
-     * @return Iterator
-     */
     public function whereNotLike(string $field, $value): self
     {
         return $this->where($field, 'not like', $value);
     }
 
-    /**
-     * @param string $field
-     * @param $value
-     * @return Iterator
-     */
     public function orNotLike(string $field, $value): self
     {
         return $this->orWhere($field, 'not like', $value);
     }
 
-    /**
-     * @param string $field
-     * @param array $values
-     * @return Iterator
-     */
     public function in(string $field, array $values): self
     {
         return $this->where($field, 'in', $values);
     }
 
-    /**
-     * @param string $field
-     * @param array $values
-     * @return Iterator
-     */
     public function whereIn(string $field, array $values): self
     {
         return $this->where($field, 'in', $values);
     }
 
-    /**
-     * @param string $field
-     * @param array $values
-     * @return Iterator
-     */
     public function orIn(string $field, array $values): self
     {
         return $this->orWhere($field, 'in', $values);
     }
 
-    /**
-     * @param string $field
-     * @param array $values
-     * @return Iterator
-     */
     public function notIn(string $field, array $values): self
     {
         return $this->where($field, 'not in', $values);
     }
 
-    /**
-     * @param string $field
-     * @param array $values
-     * @return Iterator
-     */
     public function whereNotIn(string $field, array $values): self
     {
         return $this->where($field, 'not in', $values);
     }
 
-    /**
-     * @param string $field
-     * @param array $values
-     * @return Iterator
-     */
     public function orNotIn(string $field, array $values): self
     {
         return $this->orWhere($field, 'not in', $values);
     }
 
-    /**
-     * @param string $field
-     * @param int $min
-     * @param int $max
-     * @return Iterator
-     */
     public function between(string $field, int $min, int $max): self
     {
         return $this->where($field, 'between', [$min, $max]);
     }
 
-    /**
-     * @param string $field
-     * @param int $min
-     * @param int $max
-     * @return Iterator
-     */
     public function whereBetween(string $field, int $min, int $max): self
     {
         return $this->where($field, 'between', [$min, $max]);
     }
 
-    /**
-     * @param string $field
-     * @param int $min
-     * @param int $max
-     * @return Iterator
-     */
     public function orBetween(string $field, int $min, int $max): self
     {
         return $this->orWhere($field, 'between', [$min, $max]);
     }
 
-    /**
-     * @param string $field
-     * @param int $min
-     * @param int $max
-     * @return Iterator
-     */
     public function notBetween(string $field, int $min, int $max): self
     {
         return $this->where($field, 'not between', [$min, $max]);
     }
 
-    /**
-     * @param string $field
-     * @param int $min
-     * @param int $max
-     * @return Iterator
-     */
     public function whereNotBetween(string $field, int $min, int $max): self
     {
         return $this->where($field, 'not between', [$min, $max]);
     }
 
-    /**
-     * @param string $field
-     * @param int $min
-     * @param int $max
-     * @return Iterator
-     */
     public function orNotBetween(string $field, int $min, int $max): self
     {
         return $this->orWhere($field, 'not between', [$min, $max]);
     }
 
-    /**
-     * @param string $field
-     * @return Iterator
-     */
     public function isNull(string $field): self
     {
         return $this->where($field, 'is', 'null');
     }
 
-    /**
-     * @param string $field
-     * @return Iterator
-     */
     public function whereNull(string $field): self
     {
         return $this->where($field, 'is', 'null');
     }
 
-    /**
-     * @param string $field
-     * @return Iterator
-     */
     public function whereIsNull(string $field): self
     {
         return $this->where($field, 'is', 'null');
     }
 
-    /**
-     * @param string $field
-     * @return Iterator
-     */
     public function orIsNull(string $field): self
     {
         return $this->orWhere($field, 'is', 'null');
     }
 
-    /**
-     * @param string $field
-     * @return Iterator
-     */
     public function isNotNull(string $field): self
     {
         return $this->where($field, 'is not', 'null');
     }
 
-    /**
-     * @param string $field
-     * @return Iterator
-     */
     public function whereNotNull(string $field): self
     {
         return $this->where($field, 'is not', 'null');
     }
 
-    /**
-     * @param string $field
-     * @return Iterator
-     */
     public function whereIsNotNull(string $field): self
     {
         return $this->where($field, 'is not', 'null');
     }
 
-    /**
-     * @param string $field
-     * @return Iterator
-     */
     public function orIsNotNull(string $field): self
     {
         return $this->orWhere($field, 'is not', 'null');
     }
 
-    /**
-     * @param string $field
-     * @param $value
-     * @return Iterator
-     */
     public function startsWith(string $field, $value): self
     {
         return $this->where($field, 'like', $value . '%');
     }
 
-    /**
-     * @param string $field
-     * @param $value
-     * @return Iterator
-     */
     public function notStartsWith(string $field, $value): self
     {
         return $this->where($field, 'not like', $value . '%');
     }
 
-    /**
-     * @param string $field
-     * @param $value
-     * @return Iterator
-     */
     public function whereStartsWith(string $field, $value): self
     {
         return $this->where($field, 'like', $value . '%');
     }
 
-    /**
-     * @param string $field
-     * @param $value
-     * @return Iterator
-     */
     public function whereNotStartsWith(string $field, $value): self
     {
         return $this->where($field, 'not like', $value . '%');
     }
 
-    /**
-     * @param string $field
-     * @param $value
-     * @return Iterator
-     */
     public function orStartsWith(string $field, $value): self
     {
         return $this->orWhere($field, 'like', $value . '%');
     }
 
-    /**
-     * @param string $field
-     * @param $value
-     * @return Iterator
-     */
     public function orNotStartsWith(string $field, $value): self
     {
         return $this->orWhere($field, 'not like', $value . '%');
     }
 
-    /**
-     * @param string $field
-     * @param $value
-     * @return Iterator
-     */
     public function endsWith(string $field, $value): self
     {
         return $this->where($field, 'like', '%' . $value);
     }
 
-    /**
-     * @param string $field
-     * @param $value
-     * @return Iterator
-     */
     public function notEndsWith(string $field, $value): self
     {
         return $this->where($field, 'not like', '%' . $value);
     }
 
-    /**
-     * @param string $field
-     * @param $value
-     * @return Iterator
-     */
     public function whereEndsWith(string $field, $value): self
     {
         return $this->where($field, 'like', '%' . $value);
     }
 
-    /**
-     * @param string $field
-     * @param $value
-     * @return Iterator
-     */
     public function whereNotEndsWith(string $field, $value): self
     {
         return $this->where($field, 'not like', '%' . $value);
     }
 
-    /**
-     * @param string $field
-     * @param $value
-     * @return Iterator
-     */
     public function orEndsWith(string $field, $value): self
     {
         return $this->orWhere($field, 'like', '%' . $value);
     }
 
-    /**
-     * @param string $field
-     * @param $value
-     * @return Iterator
-     */
     public function orNotEndsWith(string $field, $value): self
     {
         return $this->orWhere($field, 'not like', '%' . $value);
     }
 
-    /**
-     * @param string $field
-     * @param $value
-     * @return Iterator
-     */
     public function lt(string $field, $value): self
     {
         return $this->where($field, '<', $value);
     }
 
-    /**
-     * @param string $field
-     * @param $value
-     * @return Iterator
-     */
     public function whereLt(string $field, $value): self
     {
         return $this->where($field, '<', $value);
     }
 
-    /**
-     * @param string $field
-     * @param $value
-     * @return Iterator
-     */
     public function orLt(string $field, $value): self
     {
         return $this->orWhere($field, '<', $value);
     }
 
-    /**
-     * @param string $field
-     * @param $value
-     * @return Iterator
-     */
     public function gt(string $field, $value): self
     {
         return $this->where($field, '>', $value);
     }
 
-    /**
-     * @param string $field
-     * @param $value
-     * @return Iterator
-     */
     public function whereGt(string $field, $value): self
     {
         return $this->where($field, '>', $value);
     }
 
-    /**
-     * @param string $field
-     * @param $value
-     * @return Iterator
-     */
     public function orGt(string $field, $value): self
     {
         return $this->orWhere($field, '>', $value);
     }
 
-    /**
-     * @param string $field
-     * @param $value
-     * @return Iterator
-     */
     public function lte(string $field, $value): self
     {
         return $this->where($field, '<=', $value);
     }
 
-    /**
-     * @param string $field
-     * @param $value
-     * @return Iterator
-     */
     public function whereLte(string $field, $value): self
     {
         return $this->where($field, '<=', $value);
     }
 
-    /**
-     * @param string $field
-     * @param $value
-     * @return $this
-     */
     public function orLte(string $field, $value): self
     {
         return $this->orWhere($field, '<=', $value);
     }
 
-    /**
-     * @param string $field
-     * @param $value
-     * @return $this
-     */
     public function gte(string $field, $value): self
     {
         return $this->where($field, '>=', $value);
     }
 
-    /**
-     * @param string $field
-     * @param $value
-     * @return $this
-     */
     public function whereGte(string $field, $value): self
     {
         return $this->where($field, '>=', $value);
     }
 
-    /**
-     * @param string $field
-     * @param $value
-     * @return $this
-     */
     public function orGte(string $field, $value): self
     {
         return $this->orWhere($field, '>=', $value);
     }
 
-    /**
-     * @param $date
-     * @param bool $strict
-     * @return $this
-     */
     public function before($date, string $field = 'created_at', bool $strict = true): self
     {
         if (!is_int($date)) {
@@ -1562,21 +1150,11 @@ class Iterator implements IteratorAggregate, Countable
         return $strict ? $this->lt($field, $date) : $this->lte($field, $date);
     }
 
-    /**
-     * @param $date
-     * @param bool $strict
-     * @return $this
-     */
     public function whereBefore($date, string $field = 'created_at', bool $strict = true): self
     {
         return $this->before($date, $field, $strict);
     }
 
-    /**
-     * @param $date
-     * @param bool $strict
-     * @return $this
-     */
     public function orBefore($date, string $field = 'created_at', bool $strict = true): self
     {
         if (!is_int($date)) {
@@ -1586,11 +1164,6 @@ class Iterator implements IteratorAggregate, Countable
         return $strict ? $this->orLt($field, $date) : $this->orLte($field, $date);
     }
 
-    /**
-     * @param $date
-     * @param bool $strict
-     * @return $this
-     */
     public function after($date, string $field = 'created_at', bool $strict = true): self
     {
         if (!is_int($date)) {
@@ -1600,22 +1173,11 @@ class Iterator implements IteratorAggregate, Countable
         return $strict ? $this->gt($field, $date) : $this->gte($field, $date);
     }
 
-
-    /**
-     * @param $date
-     * @param bool $strict
-     * @return $this
-     */
     public function whereAfter($date, string $field = 'created_at', bool $strict = true): self
     {
         return $this->after($date, $field, $strict);
     }
 
-    /**
-     * @param $date
-     * @param bool $strict
-     * @return $this
-     */
     public function orAfter($date, string $field = 'created_at', bool $strict = true): self
     {
         if (!is_int($date)) {
@@ -1625,12 +1187,6 @@ class Iterator implements IteratorAggregate, Countable
         return $strict ? $this->orGt($field, $date) : $this->orGte($field, $date);
     }
 
-    /**
-     * @param string $field
-     * @param $op
-     * @param $date
-     * @return $this
-     */
     public function when(string $field, $op, $date): self
     {
         if (!is_int($date)) {
@@ -1640,23 +1196,11 @@ class Iterator implements IteratorAggregate, Countable
         return $this->where($field, $op, $date);
     }
 
-    /**
-     * @param string $field
-     * @param $op
-     * @param $date
-     * @return $this
-     */
     public function whereWhen(string $field, $op, $date): self
     {
         return $this->when($field, $op, $date);
     }
 
-    /**
-     * @param string $field
-     * @param $op
-     * @param $date
-     * @return $this
-     */
     public function orWhen(string $field, $op, $date): self
     {
         if (!is_int($date)) {
@@ -1666,33 +1210,21 @@ class Iterator implements IteratorAggregate, Countable
         return $this->orWhere($field, $op, $date);
     }
 
-    /**
-     * @return $this
-     */
     public function deleted(): self
     {
         return $this->lte('deleted_at', microtime(true));
     }
 
-    /**
-     * @return $this
-     */
     public function isDeleted(): self
     {
         return $this->lte('deleted_at', microtime(true));
     }
 
-    /**
-     * @return $this
-     */
     public function orDeleted(): self
     {
         return $this->orLte('deleted_at', microtime(true));
     }
 
-    /**
-     * @return int
-     */
     public function count(): int
     {
         return count(array_keys($this->toArray()));
@@ -1716,9 +1248,6 @@ class Iterator implements IteratorAggregate, Countable
         return app()->call($scope);
     }
 
-    /**
-     * @return Iterator
-     */
     public function getValues(): self
     {
         return $this->over(function () {
@@ -1796,7 +1325,9 @@ class Iterator implements IteratorAggregate, Countable
         if ($model instanceof Db) {
             return $this->over(function () use ($callable, $model) {
                 foreach ($this as $row) {
-                    $value = $callable($model->create($row));
+                    $item = $row instanceof Item ? $row : $model->create($row);
+
+                    $value = $callable($item);
 
                     if ($value) {
                         yield $value;
@@ -1873,7 +1404,7 @@ class Iterator implements IteratorAggregate, Countable
             if (count($result) === count(array_unique($id))) {
                 return $result;
             }
-        } elseif (! is_null($result)) {
+        } elseif (!is_null($result)) {
             return $result;
         }
 
@@ -1893,11 +1424,6 @@ class Iterator implements IteratorAggregate, Countable
         return $db->model();
     }
 
-    /**
-     * @param array $attributes
-     * @param array $values
-     * @return bool
-     */
     public function updateOrInsert(array $attributes, array $values = []): bool
     {
         if (!$this->where($attributes)->exists()) {
@@ -1997,10 +1523,6 @@ class Iterator implements IteratorAggregate, Countable
         return $this->collect()->median($key);
     }
 
-    /**
-     * @param  string|array|null  $key
-     * @return array|null
-     */
     public function mode($key = null): ?array
     {
         return $this->collect()->mode($key);
@@ -2054,12 +1576,7 @@ class Iterator implements IteratorAggregate, Countable
         });
     }
 
-    /**
-     * @param $method
-     * @param array $params
-     * @return mixed|Iterator
-     */
-    public function exec($method, array $params)
+    public function exec(string $method, array $params)
     {
         $results = $this->collect()->$method(...$params);
 
@@ -2074,18 +1591,11 @@ class Iterator implements IteratorAggregate, Countable
         return $results;
     }
 
-    /**
-     * @return Db|null
-     */
     public function getModel(): ?Db
     {
         return $this->model;
     }
 
-    /**
-     * @param Db|null $model
-     * @return Iterator
-     */
     public function setModel(?Db $model): self
     {
         $this->model = $model;

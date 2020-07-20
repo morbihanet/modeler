@@ -1,7 +1,11 @@
 <?php
 namespace Morbihanet\Modeler;
 
+use PDO;
+use Closure;
+use Throwable;
 use Illuminate\Support\Str;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
 
 class LiteStore extends Db
@@ -20,7 +24,7 @@ class LiteStore extends Db
         $this->__resolver = function () use ($store) {
             $rows = $store->select('v')->where('k', 'like', $store->getNamespace() . '.row.%')->cursor();
 
-            /** @var \Illuminate\Database\Eloquent\Model $row */
+            /** @var Model $row */
             foreach ($rows as $row) {
                 yield unserialize($row->getAttribute('v'));
             }
@@ -34,7 +38,7 @@ class LiteStore extends Db
     }
 
     /**
-     * @return \PDO
+     * @return PDO
      */
     protected function getPdo()
     {
@@ -42,12 +46,12 @@ class LiteStore extends Db
     }
 
     /**
-     * @param \Closure $callback
+     * @param Closure $callback
      * @param int $attempts
      * @return mixed
-     * @throws \Throwable
+     * @throws Throwable
      */
-    public function transaction(\Closure $callback, $attempts = 1)
+    public function transaction(Closure $callback, $attempts = 1)
     {
         return $this->__store->getConnection()->transaction($callback, $attempts);
     }
@@ -148,7 +152,7 @@ class LiteStore extends Db
         if (is_array($id)) {
             $this->__resolver = function () use ($id) {
                 foreach ($id as $idRow) {
-                    /** @var \Illuminate\Database\Eloquent\Model $row */
+                    /** @var Model $row */
                     $row = $this->__store->find($this->__store->getNamespace() . '.row.' . $idRow);
 
                     if ($row) {
@@ -160,7 +164,7 @@ class LiteStore extends Db
             return $this->setEngine(Core::iterator($this->getResolver())->setModel($this));
         }
 
-        /** @var \Illuminate\Database\Eloquent\Model $row */
+        /** @var Model $row */
         if ($row = $this->__store->find($this->__store->getNamespace() . '.row.' . $id)) {
             return $this->model(unserialize($row->getAttribute('v')));
         }

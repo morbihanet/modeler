@@ -2,10 +2,10 @@
 
 namespace Morbihanet\Modeler;
 
+use PDO;
 use Illuminate\Events\Dispatcher;
-use Illuminate\Support\Facades\Schema;
-use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Capsule\Manager as Capsule;
+
 class Database
 {
     protected static $memory = null;
@@ -31,7 +31,7 @@ class Database
 
         $params = array_merge(static::$baseParams, $params);
         $capsule->addConnection($params, $name);
-        $capsule->setFetchMode(\PDO::FETCH_ASSOC);
+        $capsule->setFetchMode(PDO::FETCH_ASSOC);
         $capsule->setEventDispatcher(new Dispatcher($app));
         $capsule->bootEloquent();
 
@@ -55,7 +55,7 @@ class Database
         ]);
 
         $capsule->addConnection($params, 'db_memory');
-        $capsule->setFetchMode(\PDO::FETCH_ASSOC);
+        $capsule->setFetchMode(PDO::FETCH_ASSOC);
         $capsule->setAsGlobal();
         $capsule->setEventDispatcher(new Dispatcher($app));
         $capsule->bootEloquent();

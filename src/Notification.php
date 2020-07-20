@@ -2,7 +2,7 @@
 
 namespace Morbihanet\Modeler;
 
-class Notification extends Modeler
+class Notification extends Model
 {
     public static function boot()
     {

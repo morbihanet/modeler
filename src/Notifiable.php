@@ -7,12 +7,22 @@ trait Notifiable
 {
     use RoutesNotifications;
 
+    public function notify(array $data)
+    {
+        app(Notifier::class)->send($this, $data);
+    }
+
+    public function notifyNow(array $data)
+    {
+        app(Notifier::class)->sendNow($this, $data);
+    }
+
     /**
      * @return Iterator
      */
     public function notifications()
     {
-        return $this->morphMany(Notification::class, 'notifiable')->orderBy('created_at', 'desc');
+        return Notification::where('notifiable_id', $this->getId())->where('notifiable', get_class($this));
     }
 
     public function readNotifications()
