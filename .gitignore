@@ -2,6 +2,6 @@
 /doctum
 /.git
 /.idea
-.env
+/.env.*
 config.user.inc.php
 .phpunit.result.cache
