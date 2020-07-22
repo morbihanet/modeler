@@ -271,7 +271,7 @@ if (!function_exists('datum')) {
         return Str::lower(Core::uncamelize(class_basename($item)));
     }
 
-    function get_datum(string $class)
+    function get_datum(string $class): ?Model
     {
         if (!class_exists($class)) {
             $parts = explode('\\', $class);
