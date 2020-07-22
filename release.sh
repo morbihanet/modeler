@@ -72,12 +72,11 @@ fi
 echo "Get last release"
 ENV_TAGS=$(git tag -l HEAD "$ENV/*" --sort='-*taggerdate')
 DAY_TAGS=$(echo -e "${ENV_TAGS}" | grep -F "$(date +'%Y-%m-%d')")
+# shellcheck disable=SC2046
 LAST_TAG=$(git describe --tags `git rev-list --tags --max-count=1`)
 
 # No tag name defined so use the latest tag
 if [ -z "${TAG_NAME}" ]; then
-    BEFORE_RELEASE=$(echo -e "${DAY_TAGS}" | head -n3)
-    echo "BEFORE_RELEASE: $BEFORE_RELEASE"
     LAST_RELEASE=$(echo -e "${DAY_TAGS}" | head -n1)
 else
     # Tag name defined so use the last tag before last one (offset 1)
