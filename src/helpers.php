@@ -266,7 +266,7 @@ if (!function_exists('datum')) {
         return Core::set('last_datum', $object);
     }
 
-    function item_table(Item $item)
+    function item_table(Item $item): string
     {
         return Str::lower(Core::uncamelize(class_basename($item)));
     }

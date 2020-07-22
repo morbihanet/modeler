@@ -41,6 +41,7 @@ class Able
         if ($item instanceof Model) {
             $item = $item->retrieveItem();
         }
+
         if ($item->exists()) {
             $class_model = item_table($item);
             $id_model = $item->getId();
@@ -58,7 +59,7 @@ class Able
         return false;
     }
 
-    public static function fetch(string $type)
+    public static function fetch(string $type): Iterator
     {
         return Core::iterator(function () use ($type) {
             foreach (datum('able')->where('type', $type)->cursor() as $item) {
