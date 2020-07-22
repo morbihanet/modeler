@@ -21,6 +21,11 @@ class Model extends Modeler implements ArrayAccess
         $this->item = Core::model(static::getDb(), $attributes);
     }
 
+    public function retrieveItem(): ?Item
+    {
+        return $this->item;
+    }
+
     public static function new(
         string $model,
         ?string $database = null,
@@ -33,36 +38,34 @@ class Model extends Modeler implements ArrayAccess
 
     public function offsetExists($offset)
     {
-        return isset($this->item[$offset]);
+        return $this->__isset($offset);
     }
 
     public function __isset($offset)
     {
-        return isset($this->item[$offset]);
+        return isset($this->item[$offset]) || $this->__get($offset) instanceof Model;
     }
 
     public function offsetGet($offset)
     {
-        $value = $this->item[$offset] ?? null;
-
-        return value($value);
+        return $this->__get($offset);
     }
 
     public function __get($offset)
     {
-        $value = $this->item[$offset] ?? null;
+        $value = $this->item->get($offset) ?? null;
 
         return value($value);
     }
 
     public function offsetSet($offset, $value)
     {
-        $this->item[$offset] = $value;
+        $this->__set($offset, $value);
     }
 
     public function __set($offset, $value)
     {
-        $this->item[$offset] = $value;
+        $this->item->set($offset, $value);
     }
 
     public function offsetUnset($offset)
@@ -190,6 +193,12 @@ class Model extends Modeler implements ArrayAccess
             return $this->item->{$name}(...$arguments);
         }
 
-        return parent::__call($name, $arguments);
+        $result = parent::__call($name, $arguments);
+
+        if ($result instanceof Item) {
+            return new static($result->toArray());
+        }
+
+        return $result;
     }
 }

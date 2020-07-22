@@ -272,35 +272,19 @@ class Record implements \IteratorAggregate, \ArrayAccess, \Countable, Arrayable
         }
 
         if (substr($name, 0, 3) === 'set' && strlen($name) > 3) {
-            $uncamelizeMethod   = Core::uncamelize(lcfirst(substr($name, 3)));
-            $field              = Str::lower($uncamelizeMethod);
-
-            $v = array_shift($arguments);
-
-            return $this->set($field, $v);
+            return $this->set($this->guessField($name), value(array_shift($arguments)));
         }
 
         if (substr($name, 0, 3) === 'get' && strlen($name) > 3) {
-            $uncamelizeMethod   = Core::uncamelize(lcfirst(substr($name, 3)));
-            $field              = Str::lower($uncamelizeMethod);
-
-            $d = array_shift($arguments);
-
-            return $this->get($field, $d);
+            return $this->get($this->guessField($name), value(array_shift($arguments)));
         }
 
         if (substr($name, 0, 3) === 'has' && strlen($name) > 3) {
-            $uncamelizeMethod   = Core::uncamelize(lcfirst(substr($name, 3)));
-            $field              = Str::lower($uncamelizeMethod);
-
-            return $this->has($field);
+            return $this->has($this->guessField($name));
         }
 
         if (substr($name, 0, 3) === 'del' && strlen($name) > 3) {
-            $uncamelizeMethod   = Core::uncamelize(lcfirst(substr($name, 3)));
-            $field              = Str::lower($uncamelizeMethod);
-
-            return $this->remove($field);
+            return $this->remove($this->guessField($name));
         }
 
         if ($class = Core::get('modeler')) {
@@ -312,6 +296,11 @@ class Record implements \IteratorAggregate, \ArrayAccess, \Countable, Arrayable
         }
 
         return $this->collection()->{$name}(...$arguments);
+    }
+
+    protected function guessField(string $name, int $prefixSize = 3): string
+    {
+        return Str::lower(Core::uncamelize(lcfirst(substr($name, $prefixSize))));
     }
 
     /**

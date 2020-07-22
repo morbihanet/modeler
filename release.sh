@@ -48,8 +48,8 @@ shift $((OPTIND-1)) # remove parsed options and args from $@ list
 
 if [ ${SHOW_HELP} -gt 0 ]; then
     echo 'Usage:'
-    echo 'release.sh --env=production -p'
-    echo 'release.sh --env=staging    -p'
+    echo 'make-release.sh --env=production -p'
+    echo 'make-release.sh --env=staging    -p'
     echo 'POSIX options:		long options:'
     echo '  -h                      --help          To have some help'
     echo '  -e                      --env=          To specify the env (staging/production)'
@@ -117,6 +117,11 @@ user: $USER" $VERSION_NAME
     fi
 else
     echo "Using tag: ${TAG_NAME}"
+    git tag --message="release: $TAG_NAME
+user: $USER" $TAG_NAME
+    if [ ${PUSH_TAG} -eq 1 ]; then
+        git push origin $TAG_NAME
+    fi
 fi
 
 TAG_WORKS=$?

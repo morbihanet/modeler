@@ -7,8 +7,15 @@ namespace Morbihanet\Modeler;
 
 class Able
 {
-    public static function add(Item $item, string $type, array $attributes = []): bool
+    /**
+     * @param Item|Model $item
+     */
+    public static function add($item, string $type, array $attributes = []): bool
     {
+        if ($item instanceof Model) {
+            $item = $item->retrieveItem();
+        }
+
         if ($item->exists()) {
             $class_model = item_table($item);
             $id_model = $item->getId();
@@ -26,13 +33,24 @@ class Able
         return false;
     }
 
-    public static function remove(Item $item, string $type): bool
+    /**
+     * @param Item|Model $item
+     */
+    public static function remove($item, string $type): bool
     {
+        if ($item instanceof Model) {
+            $item = $item->retrieveItem();
+        }
         if ($item->exists()) {
             $class_model = item_table($item);
             $id_model = $item->getId();
 
-            if ($row = datum('able')->where('type', $type)->where('class_model', $class_model)->where('id_model', $id_model)->first()) {
+            if ($row = datum('able')
+                ->where('type', $type)
+                ->where('class_model', $class_model)
+                ->where('id_model', $id_model)
+                ->first()
+            ) {
                 return $row->delete();
             }
         }
