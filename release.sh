@@ -72,9 +72,12 @@ fi
 echo "Get last release"
 ENV_TAGS=$(git tag -l HEAD "$ENV/*" --sort='-*taggerdate')
 DAY_TAGS=$(echo -e "${ENV_TAGS}" | grep -F "$(date +'%Y-%m-%d')")
+LAST_TAG=$(git describe --tags `git rev-list --tags --max-count=1`)
 
 # No tag name defined so use the latest tag
 if [ -z "${TAG_NAME}" ]; then
+    BEFORE_RELEASE=$(echo -e "${DAY_TAGS}" | head -n3)
+    echo "BEFORE_RELEASE: $BEFORE_RELEASE"
     LAST_RELEASE=$(echo -e "${DAY_TAGS}" | head -n1)
 else
     # Tag name defined so use the last tag before last one (offset 1)
@@ -84,17 +87,13 @@ fi
 if [ -z "$LAST_RELEASE" ]; then
     echo "None today, using first one"
     LAST_RELEASE=$(echo "$ENV/$(date +'%Y-%m-%d')-0");# will be +1 below
-    # Last found release for ENV
-    # No tag name defined so use the latest tag
-    if [ -z "${TAG_NAME}" ]; then
-        PREVIOUS_RELEASE=$(echo -e "${ENV_TAGS}" | head -n1)
-    else
-        # Tag name defined so use the last tag before last one (offset 1)
-        PREVIOUS_RELEASE=$(echo -e "${ENV_TAGS}" | sed -n 2p)
-    fi
 else
-    PREVIOUS_RELEASE="$LAST_RELEASE"
-    echo "Found: $LAST_RELEASE"
+    if [ "$LAST_TAG" = "$LAST_RELEASE" ]; then
+        echo "Found: $LAST_RELEASE"
+    else
+        LAST_RELEASE=$(echo "${LAST_TAG}")
+        echo "Made: $LAST_RELEASE"
+    fi
 fi
 
 echo "Version bump..."
@@ -104,9 +103,6 @@ if [ -z "${TAG_NAME}" ]; then
 else
     VERSION_NAME="$TAG_NAME"
 fi
-
-# Make the version Sentry compatible
-VERSION_CODE=$(echo "${VERSION_NAME}" | sed 's,/,_,g')
 
 echo "New version: $VERSION_NAME"
 if [ -z "${TAG_NAME}" ]; then
