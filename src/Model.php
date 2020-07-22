@@ -53,9 +53,7 @@ class Model extends Modeler implements ArrayAccess
 
     public function __get($offset)
     {
-        $value = $this->item->get($offset) ?? null;
-
-        return value($value);
+        return value($this->item->get($offset));
     }
 
     public function offsetSet($offset, $value)
