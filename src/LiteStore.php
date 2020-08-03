@@ -123,7 +123,15 @@ class LiteStore extends Db
      */
     public function makeId(): int
     {
-        return (int) $this->__store->incr('ids');
+        $store = $this->__store;
+
+        $id = (int) $store->incr('ids');
+
+        if (null !== $this->find($id)) {
+            return $this->makeId();
+        }
+
+        return $id;
     }
 
     /**

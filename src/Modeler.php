@@ -114,6 +114,7 @@ use Illuminate\Support\Traits\Macroable;
  * @method mixed|null fire(string $event, $concern = null, bool $return = false)
  * @method Item create(array $attributes = [])
  * @method Modeler setCache(bool $cache = true)
+ * @method Modeler useCache()
  * @method Modeler setEngine(Iterator $engine)
  * @method Modeler select(...$fields)
  * @method string implode($value, ?string $glue = null)

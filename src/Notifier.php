@@ -17,11 +17,12 @@ class Notifier implements Dispatcher
         Notification::create($data);
     }
 
+    /**
+     * @param Item $notifiable
+     * @param array $data
+     */
     public function sendNow($notifiable, $data)
     {
-        $data['notifiable'] = get_class($notifiable);
-        $data['notifiable_id'] = $notifiable->getId();
-
-        Notification::create($data);
+        $this->send($notifiable, $data);
     }
 }

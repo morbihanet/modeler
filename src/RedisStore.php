@@ -129,6 +129,10 @@ class RedisStore extends Db
             Redis::set($this->__prefix . '.min', $id);;
         }
 
+        if (null !== $this->find($id)) {
+            return $this->makeId();
+        }
+
         return $id;
     }
 

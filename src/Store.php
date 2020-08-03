@@ -58,7 +58,7 @@ class Store extends Db
      * @return mixed
      * @throws Throwable
      */
-    public function transaction(Closure $callback, $attempts = 1)
+    public function transaction(Closure $callback, int $attempts = 1)
     {
         return $this->__store->getConnection()->transaction($callback, $attempts);
     }
@@ -130,7 +130,15 @@ class Store extends Db
      */
     public function makeId(): int
     {
-        return (int) $this->__store->incr('ids');
+        $store = $this->__store;
+
+        $id = (int) $store->incr('ids');
+
+        if (null !== $this->find($id)) {
+            return $this->makeId();
+        }
+
+        return $id;
     }
 
     /**
@@ -219,12 +227,12 @@ class Store extends Db
     {
         $this->__where = true;
 
-        $isCallable = 1 === func_num_args() && is_callable($key);
-
         $nargs = func_num_args();
 
-        if ($nargs === 1) {
-            if (is_array($key) && false === $isCallable) {
+        $isCallable = 1 === $nargs && is_callable($key);
+
+        if ($nargs === 1 && !$isCallable) {
+            if (is_array($key)) {
                 if (count($key) === 1) {
                     $operator   = '=';
                     $value      = array_values($key);
@@ -242,14 +250,11 @@ class Store extends Db
         $operator = Str::lower($operator);
 
         if (true === $isCallable) {
-            $iterator   = $this->getEngine()->where($key, $operator, $value);
-            $ids        = [];
+            $ids = [];
 
-            foreach ($iterator as $row) {
+            foreach ($this->getEngine()->where($key, $operator, $value) as $row) {
                 $ids[] = $row['id'];
             }
-
-            unset($iterator);
 
             return $this->withIds($ids);
         }
@@ -260,11 +265,7 @@ class Store extends Db
 
         $prefix = $this->__store->getNamespace();
 
-        $id = $prefix . '.q.' . sha1(serialize(func_get_args()) . $this->lastModified());
-
-        $result = $this->__store[$id];
-
-        if (!$result) {
+        if (!$result = $this->__store[$id = $prefix . '.q.' . sha1(serialize(func_get_args()) . $this->lastModified())]) {
             foreach ($this->whereNoCache($key, $operator, $value) as $row) {
                 $result[] = $row;
             }
@@ -296,14 +297,11 @@ class Store extends Db
         ];
 
         if (!in_array($operator, $operators)) {
-            $iterator   = $this->getEngine()->where($key, $operator, $value);
-            $ids        = [];
+            $ids = [];
 
-            foreach ($iterator as $row) {
+            foreach ($this->getEngine()->where($key, $operator, $value) as $row) {
                 $ids[] = $row['id'];
             }
-
-            unset($iterator);
 
             return $this->withIds($ids);
         }
@@ -311,13 +309,12 @@ class Store extends Db
         $store = $this->__store;
 
         $db = function () use ($store, $key, $value) {
-            $rows = $store->select('v')
-                ->where('k', 'like', $store->getNamespace() . '.row.%')
-                ->where('v', 'like', 'a%s:'.strlen($key).':"'.$key.'";%'.addslashes($value).'%')
-                ->cursor()
-            ;
-
-            foreach ($rows as $row) {
+            foreach ($store
+                         ->select('v')
+                         ->where('k', 'like', $store->getNamespace() . '.row.%')
+                         ->where('v', 'like', 'a%s:'.strlen($key).':"'.$key.'";%'.addslashes($value).'%')
+                         ->cursor() as $row
+            ) {
                 yield unserialize($row->getAttribute('v'));
             }
         };

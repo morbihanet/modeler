@@ -6,6 +6,7 @@ use Morbihanet\Tools\Tool;
 use Morbihanet\Modeler\Di;
 use Morbihanet\Modeler\Api;
 use BadMethodCallException;
+use Morbihanet\Modeler\Fcm;
 use Morbihanet\Modeler\Swap;
 use Morbihanet\Modeler\Core;
 use Morbihanet\Modeler\Able;
@@ -48,6 +49,8 @@ class ModelerTest extends TestCase
         $this->assertSame(1, $country->notifications()->count());
         $this->assertSame($country->unreadNotifications()->count(), $country->notifications()->count());
         $this->assertSame(0, $country->readNotifications()->count());
+
+        $this->assertSame(1, Country::whereName('foo')->fetchOne()->getId());
     }
 
     /** @test */
@@ -103,6 +106,16 @@ class ModelerTest extends TestCase
 
         $this->assertSame(1, $query->first->id);
         $this->assertSame($query->avg('id'), $query->average('id'));
+    }
+
+    /** @test */
+    public function query_should_be_cachable()
+    {
+        Country::create(['name' => 'foo']);
+        $query = Country::useCache()->where('name', 'foo');
+
+        $this->assertSame(1, $query->count());
+        $this->assertSame(1, Country::useCache()->where('name', 'foo')->count());
     }
 
     /** @test */
@@ -267,6 +280,7 @@ class ModelerTest extends TestCase
 
         $this->assertSame(10, User::count());
         $this->assertSame('bar', User::first()->foo);
+        $this->assertSame('bar', User::all()->first->foo);
         $this->assertSame('bar', User::first()['foo']);
         $this->assertSame('bar', User::first()->getFoo());
         $this->assertSame(10, User::whereFoo('bar')->count());

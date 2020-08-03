@@ -625,11 +625,16 @@ class Db
      * @param bool $_cache
      * @return Db
      */
-    public function setCache(bool $cache = true)
+    public function setCache(bool $cache = true): self
     {
         $this->__cache = $cache;
 
         return $this;
+    }
+
+    public function useCache(bool $cache = true): self
+    {
+        return $this->setCache(true);
     }
 
     /**
@@ -680,9 +685,7 @@ class Db
 
     public function bulk(array $records)
     {
-        $this->fire('bulk');
-
-        foreach ($records as $record) {
+        foreach ($this->fire('bulk', $records, true) as $record) {
             $record->save();
         }
     }

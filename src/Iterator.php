@@ -331,6 +331,19 @@ class Iterator implements IteratorAggregate, Countable
         }
     }
 
+    public function fetch()
+    {
+        return $this->cursor();
+    }
+
+    /**
+     * @return mixed|Item|null
+     */
+    public function fetchOne()
+    {
+        return $this->first();
+    }
+
     public function get()
     {
         if (!$this->model instanceof Db) {
