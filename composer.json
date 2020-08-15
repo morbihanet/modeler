@@ -36,9 +36,10 @@
         "ext-mongodb": "*",
         "filp/whoops": "*",
         "orchestra/testbench": "^3.8|^4.0|^5.0",
+        "pagerfanta/pagerfanta": "^2.1",
+        "phpstan/phpstan": "^0.12.36",
         "phpunit/phpunit": "^8.0",
         "predis/predis": "^1.1",
-        "pagerfanta/pagerfanta": "^2.1",
         "schpill/mongodb": "*",
         "sentry/sentry-laravel": "*"
     },

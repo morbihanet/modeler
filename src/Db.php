@@ -41,7 +41,7 @@ class Db
     public function __construct(Iterator $engine)
     {
         $this->engine = $engine;
-        $this->modeler = core::get('modeler');
+        $this->modeler = Core::get('modeler');
 
         if (!isset(static::$__booted[$class = get_called_class()])) {
             static::$__booted[$class] = true;

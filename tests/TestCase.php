@@ -17,6 +17,12 @@ use M6Web\Component\RedisMock\RedisMock as Mock;
 
 abstract class TestCase extends Orchestra
 {
+    public function __construct($name = null, array $data = [], $dataName = '')
+    {
+        parent::__construct($name, $data, $dataName);
+        Core::set('now', microtime(true));
+    }
+
     public function setUp(): void
     {
         parent::setUp();
@@ -63,7 +69,15 @@ abstract class TestCase extends Orchestra
     }
 
     public function tearDown(): void
-    {
+     {
+//        $now = microtime(true);
+//        $duration = $now - Core::get('now');
+//        $num = Core::incr('tests');
+//        $total = Core::set('duration', Core::get('duration', 0) + $duration);
+//        dump("Test #$num => $duration");
+//        dump("Total => $total");
+//        Core::set('now', $now);
+
         Redis::flushdb();
         MemoryStore::empty();
         FileStore::empty();

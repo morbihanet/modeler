@@ -23,10 +23,10 @@ class Fluent extends \Illuminate\Support\Fluent
             return $this->macroCall($method, $parameters);
         }
 
-        if (substr($method, 0, 3) === 'set' && strlen($method) > 3) {
-            $uncamelizeMethod   = Core::uncamelize(lcfirst(substr($method, 3)));
-            $field              = Str::lower($uncamelizeMethod);
+        $uncamelizeMethod   = Core::uncamelize(lcfirst(substr($method, 3)));
+        $field              = Str::lower($uncamelizeMethod);
 
+        if (substr($method, 0, 3) === 'set' && strlen($method) > 3) {
             $v = array_shift($parameters);
 
             $this->attributes[$field] = $v;
@@ -35,25 +35,16 @@ class Fluent extends \Illuminate\Support\Fluent
         }
 
         if (substr($method, 0, 3) === 'get' && strlen($method) > 3) {
-            $uncamelizeMethod   = Core::uncamelize(lcfirst(substr($method, 3)));
-            $field              = Str::lower($uncamelizeMethod);
-
             $d = array_shift($arguments);
 
             return $this->get($field, $d);
         }
 
         if (substr($method, 0, 3) === 'has' && strlen($method) > 3) {
-            $uncamelizeMethod   = Core::uncamelize(lcfirst(substr($method, 3)));
-            $field              = Str::lower($uncamelizeMethod);
-
             return $this->__isset($field);
         }
 
         if (substr($method, 0, 3) === 'del' && strlen($method) > 3) {
-            $uncamelizeMethod   = Core::uncamelize(lcfirst(substr($method, 3)));
-            $field              = Str::lower($uncamelizeMethod);
-
             $status = $this->__isset($field);
             unset($this->attributes[$field]);
 

@@ -5,7 +5,7 @@ use Illuminate\Support\Str;
 
 class FileStore extends Db
 {
-    /** @var string */
+    /** @var null|string */
     protected ?string $__prefix = null;
 
     public function __construct(array $attributes = [])

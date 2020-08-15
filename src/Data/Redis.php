@@ -46,11 +46,7 @@ class Redis implements ArrayAccess
 
     public function get(string $key, $default = null)
     {
-        if ($this->has($key)) {
-            return $this->unserialize(Store::hget($this->prefix, $key));
-        }
-
-        return value($default);
+        return $this->has($key) ? $this->unserialize(Store::hget($this->prefix, $key)) : value($default);
     }
 
     public function remove(string $key): bool

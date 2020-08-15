@@ -25,7 +25,7 @@ class Bucket
         $this->url = rtrim($url, '/') . '/';
     }
 
-    public function all(string $pattern)
+    public function all(string $pattern): array
     {
         $data = $this->session['data'] ?? [];
 
@@ -53,7 +53,7 @@ class Bucket
         return $collection;
     }
 
-    public function keys(string $pattern)
+    public function keys(string $pattern): array
     {
         $keys = $this->session['keys'] ?? [];
 
@@ -249,9 +249,7 @@ class Bucket
         $params['bucket'] = $this->bucket;
         $params['action'] = $action;
 
-        $ch = curl_init();
-
-        curl_setopt($ch, CURLOPT_URL, $this->url);
+        curl_setopt($ch = curl_init(), CURLOPT_URL, $this->url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
         curl_setopt($ch, CURLOPT_POST, true);

@@ -119,7 +119,7 @@ trait ApiResponse
 
     protected function getResourceName(Request $request): string
     {
-        $parts = explode('/', $request->getRequestUri());
+        $parts = $request->segments();
 
         $resource = array_pop($parts);
 

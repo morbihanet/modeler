@@ -10,7 +10,6 @@ class Fcm extends Table
 
     public static function getIosToken(string $token): ?string
     {
-
         $headers = [
             'Authorization' => 'key=' . config('modeler.fcm_key'),
             'Content-Type'  => 'application/json',

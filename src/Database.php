@@ -8,12 +8,9 @@ use Illuminate\Database\Capsule\Manager as Capsule;
 
 class Database
 {
-    protected static $memory = null;
+    protected static ?Capsule $memory = null;
 
-    /**
-     * @var array
-     */
-    protected static $baseParams = [
+    protected static array $baseParams = [
         'driver' => 'mysql',
         'host' => 'localhost',
         'charset' => 'utf8',
@@ -21,11 +18,7 @@ class Database
         'prefix' => '',
     ];
 
-    /**
-     * @param array $params
-     * @return Capsule
-     */
-    public static function connect(array $params, string $name)
+    public static function connect(array $params, string $name): Capsule
     {
         $capsule = new Capsule($app = app());
 
@@ -38,10 +31,7 @@ class Database
         return $capsule;
     }
 
-    /**
-     * @return Capsule
-     */
-    public static function memory()
+    public static function memory(): Capsule
     {
         if (null !== static::$memory) {
             return static::$memory;

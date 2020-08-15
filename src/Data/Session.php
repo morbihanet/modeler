@@ -35,9 +35,7 @@ class Session extends Store implements
     ) {
         $this->store = &$store;
 
-        if (null === $userModel) {
-            $userModel = config('modeler.user_model');
-        }
+        $userModel = $userModel ?? config('modeler.user_model');
 
         $this->namespace    = $namespace;
         $this->userKey      = $userKey;

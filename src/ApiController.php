@@ -2,6 +2,7 @@
 namespace Morbihanet\Modeler;
 
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller as BaseController;
 
 class ApiController extends BaseController
@@ -15,19 +16,17 @@ class ApiController extends BaseController
         $this->resource = $this->getResourceName($request);
     }
 
-    public function index()
+    public function index(): JsonResponse
     {
         return $this->showAll(datum($this->resource)::all());
     }
 
-    public function store(Request $request)
+    public function store(Request $request): JsonResponse
     {
-        $item = datum($this->resource)::create($request->all());
-
-        return $this->showOne($item);
+        return $this->showOne(datum($this->resource)::create($request->all()));
     }
 
-    public function show($id)
+    public function show($id): JsonResponse
     {
         if ($item = datum($this->resource)::find((int) $id)) {
             return $this->showOne($item);
@@ -36,7 +35,7 @@ class ApiController extends BaseController
         return $this->errorResponse('Resource not found', 404);
     }
 
-    public function update(Request $request, $id)
+    public function update(Request $request, $id): JsonResponse
     {
         if ($item = datum($this->resource)::find((int) $id)) {
             return $this->showOne($item->update($request->all()));
@@ -45,7 +44,7 @@ class ApiController extends BaseController
         return $this->errorResponse('Resource not found', 404);
     }
 
-    public function destroy($id)
+    public function destroy($id): JsonResponse
     {
         if ($item = datum($this->resource)::find((int) $id)) {
             $item->delete();
