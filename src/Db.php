@@ -510,13 +510,16 @@ class Db
     {
         $conditions = Core::arrayable($conditions) ? $conditions->toArray() : $conditions;
 
+        $q = clone $this;
+
         foreach ($conditions as $field => $value) {
-            $this->where($field, $value);
+            /** @var Iterator $q */
+            $q = $q->where($field, $value);
         }
 
         $this->setModel($this->getEngine()->getModel());
 
-        if (null === ($row = $this->first())) {
+        if (null === ($row = $q->first())) {
             $row = $this->model($conditions)->save();
         }
 
@@ -531,7 +534,7 @@ class Db
     {
         $conditions = Core::arrayable($conditions) ? $conditions->toArray() : $conditions;
 
-        $q = $this;
+        $q = clone $this;
 
         foreach ($conditions as $field => $value) {
             /** @var Iterator $q */
@@ -548,7 +551,7 @@ class Db
     }
 
     /**
-     * @param null $default
+     * @param mixed|null $default
      * @return Item|mixed|null
      */
     public function firstOr($default = null)
