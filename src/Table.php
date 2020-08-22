@@ -28,4 +28,9 @@ class Table extends Facade
 
         return $datum->newQuery();
     }
+
+    public function newQuery()
+    {
+        return static::getFacadeAccessor();
+    }
 }
