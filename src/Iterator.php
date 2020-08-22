@@ -679,10 +679,15 @@ class Iterator implements IteratorAggregate, Countable
         return $this->where($key, $value)->first();
     }
 
+    /**
+     * @param string|array $key
+     * @param mixed|null $value
+     * @return Item|null|mixed
+     */
     public function findBy($key, $value = null): self
     {
         if (is_array($key) && null === $value) {
-            $instance = $this;
+            $instance = clone $this;
 
             foreach ($key as $k => $v) {
                 $instance = $instance->where($k, $v);
@@ -699,11 +704,12 @@ class Iterator implements IteratorAggregate, Countable
     }
 
     /**
-     * @param $criteria
-     * @param null $order
+     * @param string|array $key
+     * @param mixed|null $value
+     * @param null|string $order
      * @return Item|null|mixed
      */
-    public function findOneBy($key, $value = null, $order = null)
+    public function findOneBy($key, $value = null, ?string $order = null)
     {
         $result = $this->findBy($key, $value);
 
