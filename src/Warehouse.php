@@ -97,7 +97,7 @@ class Warehouse extends Model implements ArrayAccess
 
     /**
      * @param string $key
-     * @param null $default
+     * @param null|mixed $default
      * @return mixed|null
      */
     public function read(string $key, $default = null)
@@ -125,13 +125,7 @@ class Warehouse extends Model implements ArrayAccess
         return $value;
     }
 
-    /**
-     * @param $key
-     * @param int $expire
-     * @param int $by
-     * @return int
-     */
-    public function incr($key, $expire = 0, $by = 1)
+    public function incr(string $key, int $expire = 0, int $by = 1): int
     {
         $key = $this->makeKey($key);
 
@@ -160,13 +154,7 @@ class Warehouse extends Model implements ArrayAccess
         return $new;
     }
 
-    /**
-     * @param $key
-     * @param int $expire
-     * @param int $by
-     * @return int
-     */
-    public function decr($key, $expire = 0, $by = 1)
+    public function decr(string $key, int $expire = 0, int $by = 1): int
     {
         return  $this->incr($key, $expire, $by * -1);
     }

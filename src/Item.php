@@ -371,9 +371,11 @@ class Item extends Record implements Authenticatable
         }
 
         if (in_array($name, get_class_methods($modeler))) {
+            $classModeler = get_class($modeler);
+            $inst = new $classModeler($this->toArray());
             $args = array_merge([$this], $arguments);
 
-            return $modeler->{$name}(...$args);
+            return $inst->{$name}(...$args);
         }
 
         $values = $this->toArray();
@@ -451,12 +453,12 @@ class Item extends Record implements Authenticatable
         return $this->authenticable;
     }
 
-    public function getId()
+    public function getId(): ?int
     {
         return $this->id;
     }
 
-    public function getCreatedAt()
+    public function getCreatedAt(): ?Carbon
     {
         if ($value = $this->created_at) {
             return Carbon::createFromTimestamp((int) $value);
@@ -465,11 +467,9 @@ class Item extends Record implements Authenticatable
         return null;
     }
 
-    public function getUpdatedAt()
+    public function getUpdatedAt(): ?Carbon
     {
-        $value = $this->updated_at;
-
-        if ($value) {
+        if ($value = $this->updated_at) {
             return Carbon::createFromTimestamp((int) $value);
         }
 
@@ -484,7 +484,7 @@ class Item extends Record implements Authenticatable
         return $this->db ?? Core::getDb($this);
     }
 
-    public function __sleep()
+    public function __sleep(): array
     {
         $this['__db'] = get_class($this->db);
 
@@ -500,32 +500,34 @@ class Item extends Record implements Authenticatable
         $this->db = Core::get($db);
     }
 
-    public function getAuthIdentifierName()
+    public function getAuthIdentifierName(): string
     {
         return 'id';
     }
 
-    public function getAuthIdentifier()
+    public function getAuthIdentifier(): ?string
     {
-        return $this[$this->getAuthIdentifierName()];
+        return $this[$this->getAuthIdentifierName()] ?? null;
     }
 
-    public function getAuthPassword()
+    public function getAuthPassword(): ?string
     {
-        return $this['password'];
+        return $this['password'] ?? null;
     }
 
-    public function getRememberToken()
+    public function getRememberToken(): string
     {
         return $this[$this->getRememberTokenName()] ?? Core::bearer();
     }
 
-    public function setRememberToken($value)
+    public function setRememberToken($value): self
     {
         $this[$this->getRememberTokenName()] = $value;
+
+        return $this;
     }
 
-    public function getRememberTokenName()
+    public function getRememberTokenName(): string
     {
         return 'bearer';
     }

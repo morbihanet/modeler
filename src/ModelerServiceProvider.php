@@ -11,6 +11,14 @@ class ModelerServiceProvider extends ServiceProvider
 {
     public function boot()
     {
+        if (!defined('PS')) {
+            define('PS', PATH_SEPARATOR);
+        }
+
+        if (!defined('DS')) {
+            define('DS', DIRECTORY_SEPARATOR);
+        }
+
         Core::boot();
         Core::app($this->app);
 
@@ -37,7 +45,7 @@ class ModelerServiceProvider extends ServiceProvider
         })->describe('Run Modeler Scheduler tasks');
 
         Artisan::command('modeler:seed', function () {
-            (new Seeder())->run();
+            (new Seeder)->run();
         })->describe('Run Modeler seeds');
     }
 

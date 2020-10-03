@@ -30,6 +30,13 @@ trait Notifiable
         return $this->notifications()->whereNotNull('read_at');
     }
 
+    public function readNotification(Item $notification)
+    {
+        $notification->read_at = time();
+
+        return $notification->save();
+    }
+
     public function unreadNotifications()
     {
         return $this->notifications()->whereNull('read_at');

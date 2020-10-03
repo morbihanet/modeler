@@ -2,8 +2,8 @@
 .PHONY: test_stop
 .PHONY: release
 release:
-	./release.sh --env=production -p
+	do_release production
 test:
-	php vendor/bin/phpunit
+	php vendor/bin/phpunit --testdox
 test_stop:
-	php vendor/bin/phpunit --stop-on-failure
+	php vendor/bin/phpunit --stop-on-failure --testdox

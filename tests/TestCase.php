@@ -3,13 +3,16 @@
 namespace Morbihanet\Modeler\Test;
 
 use Morbihanet\Modeler\Core;
+use Morbihanet\Modeler\User;
 use Morbihanet\Modeler\Redis;
 use Morbihanet\Modeler\Store;
+use Morbihanet\Modeler\Alias;
 use Morbihanet\Modeler\Modeler;
 use Morbihanet\Modeler\FileStore;
 use Jenssegers\Mongodb\Connection;
 use Morbihanet\Modeler\MemoryStore;
 use Morbihanet\Modeler\MailManager;
+use Illuminate\Support\Facades\View;
 use Morbihanet\Modeler\ConsoleObserver;
 use Illuminate\Database\Schema\Blueprint;
 use Orchestra\Testbench\TestCase as Orchestra;
@@ -66,25 +69,19 @@ abstract class TestCase extends Orchestra
         $this->app['config']->set('mail.remote.key', '');
 
         Modeler::observeAll(ConsoleObserver::class);
+        View::addLocation(__DIR__ . '/views');
+        Alias::autoload();
     }
 
     public function tearDown(): void
      {
-//        $now = microtime(true);
-//        $duration = $now - Core::get('now');
-//        $num = Core::incr('tests');
-//        $total = Core::set('duration', Core::get('duration', 0) + $duration);
-//        dump("Test #$num => $duration");
-//        dump("Total => $total");
-//        Core::set('now', $now);
+         Redis::flushdb();
+         MemoryStore::empty();
+         FileStore::empty();
 
-        Redis::flushdb();
-        MemoryStore::empty();
-        FileStore::empty();
-
-        if (is_dir(__DIR__ . '/data')) {
-            @rmdir(__DIR__ . '/data');
-        }
+         if (is_dir(__DIR__ . '/data')) {
+             @rmdir(__DIR__ . '/data');
+         }
     }
 
     /**

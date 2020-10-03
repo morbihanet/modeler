@@ -1,7 +1,9 @@
 <?php
 namespace Morbihanet\Modeler;
 
-class MongoModel extends \Jenssegers\Mongodb\Eloquent\Model
+use Jenssegers\Mongodb\Eloquent\Model;
+
+class MongoModel extends Model
 {
     protected $hidden = [];
     protected $guarded = [];

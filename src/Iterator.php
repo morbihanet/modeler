@@ -291,8 +291,6 @@ class Iterator implements IteratorAggregate, Countable
                 if (!$row instanceof Item) {
                     return $this->model->model($this->withSelect($row));
                 }
-
-                return $row;
             }
 
             return $row;
@@ -542,10 +540,8 @@ class Iterator implements IteratorAggregate, Countable
         $page = $page ?? request()->get('page', 1);
         $perPage = $perPage ?? request()->get('max_per_page', 25);
 
-        $sliced = $this->slice(($page - 1) * $perPage, $perPage);
-
         return new LengthAwarePaginator(
-            $sliced,
+            $this->slice(($page - 1) * $perPage, $perPage),
             $this->count(), $perPage, $page, [
             'path' => LengthAwarePaginator::resolveCurrentPath(),
         ]);

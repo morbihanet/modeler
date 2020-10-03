@@ -157,7 +157,7 @@ use Predis\Client as Predis;
 
 class Redis
 {
-    protected static $engine = null;
+    protected static ?object $engine = null;
     protected static ?Redis $instance = null;
 
     /**
@@ -167,9 +167,7 @@ class Redis
     public static function engine($engine = null)
     {
         if (null !== $engine) {
-            static::$engine = $engine;
-
-            return $engine;
+            return static::$engine = $engine;
         }
 
         if (null === static::$engine) {

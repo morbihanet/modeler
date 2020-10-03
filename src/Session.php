@@ -82,8 +82,8 @@ class Session extends Store implements
 
     /**
      * @param string $key
-     * @param null $default
-     * @return null
+     * @param null|mixed $default
+     * @return null|mixed
      */
     public function get($key, $default = null)
     {

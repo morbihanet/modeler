@@ -614,4 +614,4 @@ class Belt
 //}, 'user');
 
 // echo URL to user-details page for ID 5
-//echo $router->url( 'user-details', array( 'id' => 5 ) ); // Output: "/users/5"
+//echo $router->url('user-details', ['id' => 5]); // Output: "/users/5"

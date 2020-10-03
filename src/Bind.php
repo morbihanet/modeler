@@ -39,13 +39,7 @@ class Bind implements ArrayAccess
         return $this;
     }
 
-    /**
-     * @param $target
-     * @param $method
-     * @param $parameters
-     * @return mixed|null
-     */
-    public function bindStealCall($target, $method, $parameters)
+    public function bindStealCall($target, string $method, array $parameters)
     {
         $macro = static::$macros[$method] ?? null;
 
@@ -60,11 +54,7 @@ class Bind implements ArrayAccess
         return null;
     }
 
-    /**
-     * @param string $method
-     * @return $this
-     */
-    protected function __called(string $method)
+    protected function __called(string $method): self
     {
         if (!isset($this->__called[$method])) {
             $this->__called[$method] = 0;
@@ -75,19 +65,11 @@ class Bind implements ArrayAccess
         return $this;
     }
 
-    /**
-     * @param string $method
-     * @return bool
-     */
     public function hasBeenCalled(string $method): bool
     {
         return isset($this->__called[$method]) && 0 < $this->__called[$method];
     }
 
-    /**
-     * @param string $method
-     * @return int
-     */
     public function timesCalled(string $method): int
     {
         if (isset($this->__called[$method])) {
@@ -130,11 +112,7 @@ class Bind implements ArrayAccess
         }
     }
 
-    /**
-     * @param $key
-     * @return bool
-     */
-    public function __isset($key)
+    public function __isset($key): bool
     {
         return null !== $this->__get($key);
     }

@@ -5,6 +5,10 @@ use ArrayAccess;
 use Illuminate\Support\Str;
 use Morbihanet\Modeler\Traits\Permittable;
 
+/**
+ * @mixin \Illuminate\Database\Eloquent\Model
+ */
+
 class Model extends Modeler implements ArrayAccess
 {
     use Permittable;
@@ -198,5 +202,10 @@ class Model extends Modeler implements ArrayAccess
         }
 
         return $result;
+    }
+
+    public function jsonSerialize()
+    {
+        return $this->toArray();
     }
 }

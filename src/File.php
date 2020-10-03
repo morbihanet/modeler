@@ -3,6 +3,8 @@ namespace Morbihanet\Modeler;
 
 use Illuminate\Support\Arr;
 use Illuminate\Filesystem\Filesystem;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Filesystem\FilesystemAdapter;
 use Symfony\Component\HttpFoundation\File\File as Base;
 
 /**
@@ -135,6 +137,23 @@ class File
     public static function getInstance(): Filesystem
     {
         return app('files');
+    }
+
+    public static function store(string $filename, string $path, $content, string $disk = 'local'): bool
+    {
+        $fullPath = rtrim($path, '\\/') . '/' . $filename;
+
+        /** @var FilesystemAdapter $storage */
+        $storage = Storage::disk($disk);
+
+        if ($storage->exists($fullPath)) {
+            $storage->delete($fullPath);
+        }
+
+        return $storage->getDriver()->put(
+            $fullPath,
+            $content
+        );
     }
 
     public static function __callStatic(string $name, array $arguments)

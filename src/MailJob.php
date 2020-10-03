@@ -4,7 +4,7 @@ namespace Morbihanet\Modeler;
 
 use Exception;
 use Illuminate\Bus\Queueable;
-use Swift_Mime_SimpleMessage;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -19,6 +19,11 @@ class MailJob implements ShouldQueue
     public function __construct($message)
     {
         $this->message = $message;
+    }
+
+    public static function queue(...$args): void
+    {
+        Mail::queue(new static(...$args));
     }
 
     public function handle()

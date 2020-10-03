@@ -185,11 +185,13 @@ class Db
         }
 
         $now = time();
+        $new = false;
 
         if (!$model->exists()) {
             $this->fire('creating', $model);
             $model['id'] = $this->makeId();
             $model['created_at'] = $now;
+            $new = true;
         } else {
             $this->fire('updating', $model);
         }
@@ -201,6 +203,12 @@ class Db
         $saved = $this->engine->save($model);
 
         $this->fire('saved', $saved);
+
+        if (true === $new) {
+            $this->fire('created', $saved);
+        } else {
+            $this->fire('updated', $saved);
+        }
 
         return $model;
     }
@@ -1036,28 +1044,25 @@ class Db
      */
     public function fire(string $event, $concern = null, bool $return = false)
     {
-        $methods = get_class_methods($this);
         $method  = Str::camel('on_' . $event);
 
-        if (in_array($method, $methods)) {
-            $result = $this->{$method}($concern);
-
-            if ($return) {
+        if (in_array($method, get_class_methods($this))) {
+            if ($result = $this->{$method}($concern) && $return) {
+                return $result;
+            }
+        } else if (in_array($method, get_class_methods($modeler = app($this->modeler)))) {
+            if ($result = $modeler->{$method}($concern) && true === $return) {
                 return $result;
             }
         } else {
             $observers = Core::get('itdb.observers', []);
-            $self = get_called_class();
-
-            $observer = Arr::get($observers, $self, Arr::get($observers, Modeler::class));
+            $observer = Arr::get($observers, get_called_class(), Arr::get($observers, Modeler::class));
 
             if (null !== $observer) {
                 $methods = get_class_methods($observer);
 
                 if (in_array($event, $methods) || (count($methods) === 1 && in_array('__call', $methods))) {
-                    $result = (new $observer)->{$event}($concern);
-
-                    if ($return) {
+                    if ($result = (new $observer)->{$event}($concern) && $return) {
                         return $result;
                     }
                 }

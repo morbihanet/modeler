@@ -19,6 +19,14 @@ use Morbihanet\Modeler\MongoStore;
 use Morbihanet\Modeler\MemoryStore;
 use Morbihanet\Modeler\Data\Session;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Contracts\Console\Kernel;
+
+if (!function_exists('wordTs')) {
+    function wordTs(string $words)
+    {
+        return (new DateTime($words))->getTimestamp();
+    }
+}
 
 if (!function_exists('record')) {
     function record($data)
@@ -160,6 +168,13 @@ if (!function_exists('redis_data')) {
     }
 }
 
+if (!function_exists('artisan')) {
+    function artisan(string $command, array $parameters = [])
+    {
+        return app(Kernel::class)->call($command, $parameters);
+    }
+}
+
 if (!function_exists('app_config')) {
     function app_config($context = null)
     {
@@ -228,7 +243,7 @@ if (!function_exists('doc')) {
 if (!function_exists('datum')) {
     function datum(
         string $model,
-        ?string $database = null,
+        $database = null,
         array $attributes = [],
         ?string $namespace = null,
         bool $authenticable = false,
@@ -294,7 +309,7 @@ if (!function_exists('db_model')) {
         array $attributes = [],
         string $namespace = 'DB\\Models',
         bool $authenticable = false
-    ): Model {
+    ): Modeler {
         return model_generator($model, $attributes, $namespace, Store::class)->setAuthenticable($authenticable);
     }
 }
@@ -305,7 +320,7 @@ if (!function_exists('redis_model')) {
         array $attributes = [],
         string $namespace = 'Redis\\Models',
         bool $authenticable = false
-    ): Model {
+    ): Modeler {
         return model_generator('redis_' . $model, $attributes, $namespace, RedisStore::class)
             ->setAuthenticable($authenticable);
     }
@@ -317,7 +332,7 @@ if (!function_exists('memory_model')) {
         array $attributes = [],
         string $namespace = 'Memory\\Models',
         bool $authenticable = false
-    ): Model {
+    ): Modeler {
         return model_generator('memory_' . $model, $attributes, $namespace, MemoryStore::class)
             ->setAuthenticable($authenticable);
     }
@@ -329,7 +344,7 @@ if (!function_exists('file_model')) {
         array $attributes = [],
         string $namespace = 'File\\Models',
         bool $authenticable = false
-    ): Model {
+    ): Modeler {
         return model_generator('file_' . $model, $attributes, $namespace, FileStore::class)
             ->setAuthenticable($authenticable);
     }
@@ -341,7 +356,7 @@ if (!function_exists('lite_model')) {
         array $attributes = [],
         string $namespace = 'Lite\\Models',
         bool $authenticable = false
-    ): Model {
+    ): Modeler {
         return model_generator('lite_' . $model, $attributes, $namespace, LiteStore::class)
             ->setAuthenticable($authenticable);
     }
@@ -355,9 +370,9 @@ if (!function_exists('db_store')) {
 }
 
 if (!function_exists('lite_model')) {
-    function lite_model(string $model, string $namespace = 'Lite\\Models', bool $authenticable = false): Model
+    function lite_model(string $model, string $namespace = 'Lite\\Models', bool $authenticable = false): Modeler
     {
-        return model_generator($model, $namespace, LiteStore::class)->setAuthenticable($authenticable);
+        return model_generator($model, [], $namespace, LiteStore::class)->setAuthenticable($authenticable);
     }
 }
 
@@ -479,11 +494,15 @@ if (!function_exists('modeler')) {
 
             $name = Str::plural($model);
 
+            /** @var Modeler $db */
             $db = get_class($item->getDb());
 
             Route::group(['prefix' => $prefix], function () use ($name, $db) {
                 Route::get($name, function() use ($db) {
-                    return response()->json($db::all()->toArray());
+                    /** @var \Morbihanet\Modeler\Iterator $iterator */
+                    $iterator = $db::all();
+
+                    return response()->json($iterator->toArray());
                 });
 
                 Route::get($name . '/{id}', function($id) use ($db) {

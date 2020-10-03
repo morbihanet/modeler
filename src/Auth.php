@@ -40,7 +40,7 @@ class Auth
      * @param Item $user
      * @return bool
      */
-    public function forUser(Item $user)
+    public function forUser(Item $user): bool
     {
         if ($olduser = $this->user()) {
             $this->old_user = $olduser->getId();

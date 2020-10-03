@@ -1,9 +1,12 @@
 <?php
 namespace Morbihanet\Modeler;
 
+use Closure;
 use Illuminate\Support\Str;
 use Illuminate\Support\Arr;
 use Faker\Generator as Faker;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Traits\Macroable;
 
 /**
@@ -179,7 +182,7 @@ class Modeler
         }
     }
 
-    public static function defineSeeder($seeder)
+    public static function defineSeeder($seeder): void
     {
         static::$seeders[get_called_class()] = $seeder;
     }
@@ -216,9 +219,7 @@ class Modeler
     {
         Core::set('modeler_store', static::$store);
 
-        $class = get_called_class();
-
-        static::$booted[$class] = true;
+        static::$booted[$class = get_called_class()] = true;
 
         Event::fire('model:' . $class . ':booting');
 
@@ -510,5 +511,28 @@ class Modeler
         $this->authenticable = $authenticable;
 
         return $this;
+    }
+
+    public static function promise(Closure $transaction, Closure $onSuccess, Closure $onFail)
+    {
+        DB::statement('SET FOREIGN_KEY_CHECKS=0');
+
+        DB::beginTransaction();
+
+        try {
+            $transaction->call(new static);
+        } catch (QueryException $e) {
+            $onFail->call($e, $e);
+
+            DB::rollBack();
+            DB::statement('SET FOREIGN_KEY_CHECKS=1');
+
+            throw $e;
+        }
+
+        DB::commit();
+        DB::statement('SET FOREIGN_KEY_CHECKS=1');
+
+        $onSuccess->call(new static);
     }
 }

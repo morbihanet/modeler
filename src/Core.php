@@ -494,20 +494,21 @@ class Core
         return Date::now($tz);
     }
 
-    public static function lazy(Closure $callback, ...$parameters): Closure
+    public static function lazy(callable $callback): Closure
     {
-        return function () use ($callback, $parameters) {
-            return static::app()->call($callback, $parameters);
+        return function (...$parameters) use ($callback) {
+            return $callback(...$parameters);
         };
     }
 
-    /**
-     * @param object $concern
-     * @return bool
-     */
     public static function arrayable($concern): bool
     {
         return is_object($concern) && in_array('toArray', get_class_methods($concern));
+    }
+
+    public static function invokable($concern): bool
+    {
+        return is_object($concern) && in_array('__invoke', get_class_methods($concern));
     }
 
     /**
@@ -1916,5 +1917,12 @@ value="'.static::getToken().'"
                 return app($name);
             }
         }
+
+        return null;
+    }
+
+    public static function uniqid(): string
+    {
+        return sha1(password_hash(uniqid("", true), PASSWORD_BCRYPT));
     }
 }

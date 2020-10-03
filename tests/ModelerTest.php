@@ -1,25 +1,28 @@
 <?php
 namespace Morbihanet\Modeler\Test;
 
+use BookAlias;
 use Pagerfanta\Pagerfanta;
 use Morbihanet\Tools\Tool;
 use Morbihanet\Modeler\Di;
 use Morbihanet\Modeler\Api;
 use BadMethodCallException;
-use Morbihanet\Modeler\Fcm;
 use Morbihanet\Modeler\Swap;
 use Morbihanet\Modeler\Core;
 use Morbihanet\Modeler\Able;
 use Morbihanet\Modeler\User;
 use Morbihanet\Modeler\Item;
 use Faker\Generator as Faker;
+use Morbihanet\Modeler\Lazy;
 use Morbihanet\Modeler\Event;
 use GuzzleHttp\Psr7\Response;
+use Morbihanet\Modeler\Alias;
 use Morbihanet\Modeler\Config;
 use Morbihanet\Modeler\Valued;
 use Morbihanet\Modeler\Router;
 use Morbihanet\Modeler\Schedule;
 use Morbihanet\Modeler\Iterator;
+use Morbihanet\Modeler\Deferred;
 use Morbihanet\Modeler\Scheduler;
 use Morbihanet\Modeler\Collector;
 use Illuminate\Http\JsonResponse;
@@ -29,6 +32,7 @@ use Morbihanet\Modeler\MonitorLazy;
 use Morbihanet\Modeler\MonitorAdmin;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 class ModelerTest extends TestCase
@@ -40,6 +44,59 @@ class ModelerTest extends TestCase
         return true && $a;
     }
 
+    private function promise(int $number)
+    {
+        $deferred = new Deferred;
+
+        $number > 2 ? $deferred->resolve(fn() => "success") : $deferred->reject(fn() => "error");
+
+        return $deferred->promise();
+    }
+
+    /** @test */
+    public function it_should_be_a_promise()
+    {
+        $this->promise(1)->then(function ($data) {
+            $this->assertSame('success', $data);
+        })->catch(function ($data) {
+            $this->assertSame('error', $data);
+        });
+
+        $this->promise(3)->then(function ($data) {
+            $this->assertSame('success', $data);
+        })->catch(function ($data) {
+            $this->assertSame('error', $data);
+        });
+    }
+
+    /** @test */
+    public function it_should_be_sessionable()
+    {
+        redis_session()->set('foo', 'bar');
+        $this->assertSame('bar', redis_session()->get('foo'));
+    }
+
+    /** @test */
+    public function it_should_be_aliasable()
+    {
+        Alias::add('BookAlias', Book::class);
+        $this->assertSame(0, BookAlias::count());
+        $this->assertNull(BookAlias::first());
+    }
+
+    /** @test */
+    public function it_should_be_mailable()
+    {
+        $this->assertSame(0, Message::toQueue(function (Message $message) {
+            $message
+                ->from('sender@morbihanet.com')
+                ->to('receiver@morbihanet.com')
+                ->setTemplate('mails.test')
+                ->subject('test')
+                ->build();
+        }));
+    }
+
     /** @test */
     public function it_should_be_notifiable()
     {
@@ -49,6 +106,9 @@ class ModelerTest extends TestCase
         $this->assertSame(1, $country->notifications()->count());
         $this->assertSame($country->unreadNotifications()->count(), $country->notifications()->count());
         $this->assertSame(0, $country->readNotifications()->count());
+
+        $country->readNotification($country->unreadNotifications()->first());
+        $this->assertSame(0, $country->unreadNotifications()->count());
 
         $this->assertSame(1, Country::whereName('foo')->fetchOne()->getId());
     }
@@ -323,15 +383,19 @@ class ModelerTest extends TestCase
     /** @test */
     public function it_should_be_lazyable()
     {
-        $lazy = Core::lazy(function () {
-            Core::incr('lazy');
+        $lazy = Core::lazy($closure = function (int $by = 2): int {
+            return Core::incr('lazy', $by);
         });
 
         $this->assertSame(0, Core::get('lazy', 0));
+        $this->assertSame(1, $lazy(1));
+        $this->assertSame(3, $lazy());
 
-        $lazy();
+        $instance = Lazy::getInstance();
+        $instance['lazy'] = $closure;
 
-        $this->assertSame(1, Core::get('lazy', 0));
+        $this->assertSame(3, Core::get('lazy', 0));
+        $this->assertSame(5, $instance['lazy']);
     }
 
     /** @test */
@@ -348,9 +412,9 @@ class ModelerTest extends TestCase
         $this->assertTrue($permission->check($admin, 'demo'));
         $this->assertFalse($permission->check($member, 'demo'));
 
-        User::addMonitor(new MonitorLazy(function ($user, $permission, $concern) {
+        User::addMonitor(new MonitorLazy(function ($user, string $permission, $concern): bool {
             return $permission === 'is_member';
-        }, function ($user, $permission, $concern) {
+        }, function ($user, string $permission, $concern): bool {
             return !$user->isAdmin();
         }))->removeMonitor($adminMonitor);
 
@@ -367,16 +431,33 @@ class ModelerTest extends TestCase
             return 'baz';
         })->name('test');
 
-        $this->assertCount(1, Router::getRoutes());
+        Router::get('/json', function () {
+            return ['bar' => 'baz'];
+        })->name('json');
+
+        $this->assertCount(2, Router::getRoutes());
 
         $_SERVER['REQUEST_URI'] = '/test';
 
         /** @var Response $response */
         $response = Router::dispatch();
 
+        $this->assertTrue(Router::isRoute('test'));
+
         $this->assertSame(200, $response->getStatusCode());
         $this->assertSame('OK', $response->getReasonPhrase());
         $this->assertSame('baz', (string) $response->getBody());
+
+        $_SERVER['REQUEST_URI'] = '/json';
+
+        /** @var Response $response */
+        $response = Router::dispatch();
+
+        $this->assertTrue(Router::isRoute('json'));
+
+        $this->assertSame(200, $response->getStatusCode());
+        $this->assertSame('OK', $response->getReasonPhrase());
+        $this->assertSame(json_encode(['bar' => 'baz'], JSON_PRETTY_PRINT), (string) $response->getBody());
     }
 
     /** @test */
@@ -428,7 +509,6 @@ class ModelerTest extends TestCase
         $this->assertSame(Book::find(26)->name, $results->first()->name);
     }
 
-    /** @test */
     public function it_should_be_mongoable()
     {
         MongoHouse::truncate();
@@ -1831,13 +1911,13 @@ class ModelerTest extends TestCase
         $this->assertEquals(1, $baudelaire->file_books->count());
     }
 
-    public function testNbqueries()
+    public function testNbQueries()
     {
-        $this->assertGreaterThan(0, Core::get('console_queries_writing'));
-        $this->assertGreaterThan(0, Core::get('console_queries_reading'));
+        $this->assertGreaterThan($z = 0, $w = Core::get('console_queries_writing'));
+        $this->assertGreaterThan($z, $r = Core::get('console_queries_reading'));
 
-        fwrite(STDERR, print_r("\n\n" . 'Queries writing => ' . $w = Core::get('console_queries_writing'), true));
-        fwrite(STDERR, print_r("\n" . 'Queries reading => ' . $r = Core::get('console_queries_reading'), true));
+        fwrite(STDERR, print_r("\n\n" . 'Queries writing => ' . $w, true));
+        fwrite(STDERR, print_r("\n" . 'Queries reading => ' . $r, true));
         fwrite(STDERR, print_r("\n\n" . 'Queries total => ' . ($r + $w), true));
     }
 }
