@@ -7,6 +7,7 @@ class Lazy implements ArrayAccess
 {
     protected static array $lazies = [];
     protected static array $instances = [];
+    protected static array $parameters = [];
     protected ?string $namespace = null;
 
     public function __construct(string $namespace = 'core')
@@ -49,9 +50,42 @@ class Lazy implements ArrayAccess
         return $this;
     }
 
-    public function get(string $key, $default)
+    public function factory(string $key, callable $value, ...$parameters): self
     {
-        return value(static::$lazies[$this->makeKey($key)] ?? $default);
+        $this->offsetSet($key, $value);
+
+        static::$parameters[$this->makeKey($key)] = $parameters;
+
+        return $this;
+    }
+
+    public function singleton(string $key, callable $value, ...$parameters): self
+    {
+        $this->offsetSet($key, $value(...$parameters));
+
+        return $this;
+    }
+
+    public function get(string $key, $default = null)
+    {
+        $get = static::$lazies[$this->makeKey($key)] ?? $default;
+
+        if (is_callable($get)) {
+            $params = static::$parameters[$this->makeKey($key)] ?? [];
+
+            return $get(...$params);
+        }
+
+        return value($default);
+    }
+
+    public function once(string $key, $default = null)
+    {
+        $value = value(static::$lazies[$this->makeKey($key)] ?? $default);
+
+        static::$lazies[$this->makeKey($key)] = $value;
+
+        return $value;
     }
 
     public function offsetExists($offset)
@@ -61,7 +95,15 @@ class Lazy implements ArrayAccess
 
     public function offsetGet($offset)
     {
-        return value(static::$lazies[$this->makeKey($offset)] ?? null);
+        $get = static::$lazies[$this->makeKey($offset)] ?? null;
+
+        if (is_callable($get)) {
+            $params = static::$parameters[$this->makeKey($offset)] ?? [];
+
+            return $get(...$params);
+        }
+
+        return $get;
     }
 
     public function offsetSet($offset, $value)

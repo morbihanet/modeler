@@ -28,7 +28,7 @@
         "php": "^7.4",
         "ext-curl": "*",
         "ext-json": "*",
-        "guzzlehttp/guzzle": "^6.5",
+        "guzzlehttp/guzzle": "*",
         "laravel/framework": "^8.0",
         "ext-zlib": "*"
     },
@@ -43,7 +43,8 @@
         "phpunit/phpunit": "^8.0",
         "predis/predis": "^1.1",
         "schpill/mongodb": "*",
-        "sentry/sentry-laravel": "*"
+        "sentry/sentry-laravel": "*",
+        "typesense/typesense-php": "^4.0"
     },
     "autoload": {
         "psr-4": {

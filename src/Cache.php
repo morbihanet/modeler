@@ -16,10 +16,7 @@ class Cache implements Store, ArrayAccess, Countable
         Macroable::__call as macroCall;
     }
 
-    /**
-     * @var Driver
-     */
-    private $store;
+    protected ?Driver $store;
 
     public function __construct(string $namespace = 'core')
     {
@@ -640,5 +637,20 @@ class Cache implements Store, ArrayAccess, Countable
         $this->store = $store;
 
         return $this;
+    }
+
+    public function retriever($id, array $data = []): string
+    {
+        $encoded = Core::uniqid();
+        $data['decoded_id'] = $id;
+
+        if (isset($this->store[$encoded])) {
+            return $this->retriever($id, $data);
+        }
+
+        $this->store[$encoded] = $data;
+        $this->store[$id] = $encoded;
+
+        return $encoded;
     }
 }

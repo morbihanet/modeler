@@ -20,6 +20,7 @@ use Morbihanet\Modeler\Alias;
 use Morbihanet\Modeler\Config;
 use Morbihanet\Modeler\Valued;
 use Morbihanet\Modeler\Router;
+use Morbihanet\Modeler\Record;
 use Morbihanet\Modeler\Schedule;
 use Morbihanet\Modeler\Iterator;
 use Morbihanet\Modeler\Deferred;
@@ -32,7 +33,6 @@ use Morbihanet\Modeler\MonitorLazy;
 use Morbihanet\Modeler\MonitorAdmin;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 class ModelerTest extends TestCase
@@ -51,6 +51,95 @@ class ModelerTest extends TestCase
         $number > 2 ? $deferred->resolve(fn() => "success") : $deferred->reject(fn() => "error");
 
         return $deferred->promise();
+    }
+
+    /** @test */
+    public function it_should_be_typesensable()
+    {
+        $ts = Core::typensense();
+
+        $db = datum('book');
+
+        $book = $db->create([
+            'title' => 'Notre Dame de Paris',
+            'year' => 1843,
+            'description' => 'Premier livre à succès de Hugo'
+        ]);
+
+        $collection = $ts->getCollectionIndex($book, [
+            'name' => 'books',
+            'fields' => [
+                [
+                    'name' => 'title',
+                    'type' => 'string',
+                ],
+                [
+                    'name' => 'description',
+                    'type' => 'string',
+                ],
+                [
+                    'name' => 'year',
+                    'type' => 'int32',
+                ],
+                [
+                    'name' => 'year_facet',
+                    'type' => 'string',
+                    'facet' => true,
+                ],
+            ],
+            'default_sorting_field' => 'year',
+        ]);
+
+        $collection->documents->create([
+            'id' => (string) $book->getId(),
+            'year' => $book->year,
+            'year_facet' => "{$book->year}",
+            'title' => $book->title,
+            'description' => $book->description
+        ]);
+
+        $results = $collection->documents->search([
+            'q' => 'dame',
+            'query_by' => 'title,description',
+            'sort_by' => 'year:desc',
+        ]);
+
+        $this->assertTrue(1 === $results['found']);
+        $this->assertTrue('Notre <mark>Dame</mark> de Paris' === $results['hits'][0]['highlights'][0]['snippet']);
+
+        $results = $collection->documents->search([
+            'q' => 'hugo',
+            'query_by' => 'title,description',
+            'sort_by' => 'year:desc',
+        ]);
+
+        $this->assertTrue(1 === $results['found']);
+
+        $collection->delete();
+    }
+
+    /** @test */
+    public function it_should_be_immutable()
+    {
+        $array = ['foo' => true, 'bar' => true];
+
+        $immutable = immute($array, function ($a) {
+            $a['foo'] = false;
+        });
+
+        $this->assertNotSame($array, $immutable);
+        $this->assertTrue($array['foo']);
+        $this->assertFalse($immutable['foo']);
+
+        $record = new Record(['foo' => true, 'bar' => true]);
+
+        $immutable = immute($record, function ($rec) {
+            $rec['foo'] = false;
+        });
+
+        $this->assertNotSame($record, $immutable);
+        $this->assertTrue($record['foo']);
+        $this->assertFalse($immutable['foo']);
     }
 
     /** @test */
@@ -1918,6 +2007,6 @@ class ModelerTest extends TestCase
 
         fwrite(STDERR, print_r("\n\n" . 'Queries writing => ' . $w, true));
         fwrite(STDERR, print_r("\n" . 'Queries reading => ' . $r, true));
-        fwrite(STDERR, print_r("\n\n" . 'Queries total => ' . ($r + $w), true));
+        fwrite(STDERR, print_r("\n\n" . 'Queries total => ' . ($r + $w) . "\n\n", true));
     }
 }

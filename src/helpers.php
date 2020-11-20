@@ -5,6 +5,7 @@ use Morbihanet\Modeler\Dyn;
 use Morbihanet\Modeler\Item;
 use Illuminate\Http\Request;
 use Morbihanet\Modeler\Core;
+use Morbihanet\Modeler\Bank;
 use Morbihanet\Modeler\Store;
 use Morbihanet\Modeler\Model;
 use Morbihanet\Modeler\Valued;
@@ -240,6 +241,19 @@ if (!function_exists('doc')) {
     }
 }
 
+if (!function_exists('lib')) {
+    function lib(string $name, ...$parameters)
+    {
+        $class = 'Morbihanet\\Modeler\\' . ucfirst(Str::camel(strtolower($name)));
+
+        if (!empty($parameters)) {
+            return new $class(...$parameters);
+        }
+
+        return new $class;
+    }
+}
+
 if (!function_exists('datum')) {
     function datum(
         string $model,
@@ -281,7 +295,7 @@ if (!function_exists('datum')) {
         return Core::set('last_datum', $object);
     }
 
-    function item_table(Item $item): string
+    function item_table($item): string
     {
         return Str::lower(Core::uncamelize(class_basename($item)));
     }
@@ -373,6 +387,30 @@ if (!function_exists('lite_model')) {
     function lite_model(string $model, string $namespace = 'Lite\\Models', bool $authenticable = false): Modeler
     {
         return model_generator($model, [], $namespace, LiteStore::class)->setAuthenticable($authenticable);
+    }
+}
+
+if (!function_exists('bank')) {
+    function bank(string $namespace = 'core'): Bank
+    {
+        return Bank::make($namespace);
+    }
+}
+
+if (!function_exists('immute')) {
+    function immute($subject, callable $muter)
+    {
+        if (is_object($subject)) {
+            $clone = clone $subject;
+        } elseif (is_array($subject)) {
+            $clone = new ArrayObject($subject);;
+        } else {
+            return $muter($subject);
+        }
+
+        $muter($clone);
+
+        return is_array($subject) ? $clone->getArrayCopy() : $clone;
     }
 }
 

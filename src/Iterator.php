@@ -1333,6 +1333,17 @@ class Iterator implements IteratorAggregate, Countable
         return $this->customize($callable);
     }
 
+    public function nested(callable $callable): self
+    {
+        return $this->over(function () use ($callable) {
+            $self = $callable($this);
+
+            foreach ($self as $key => $row) {
+                yield $key => $row;
+            }
+        });
+    }
+
     public function customize(callable $callable): self
     {
         $model = $this->getModel();

@@ -37,6 +37,7 @@ use Illuminate\Mail\Transport\Transport;
 use Illuminate\View\Factory as viewFactory;
 use Illuminate\Http\Client\Factory as Http;
 use Illuminate\View\Engines\EngineResolver;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Facades\DB as DbMaster;
 use Illuminate\Validation\Factory as ValidatorFactory;
 use Symfony\Component\HttpFoundation\File\Exception\FileException;
@@ -492,6 +493,46 @@ class Core
     public static function now($tz = null): Carbon
     {
         return Date::now($tz);
+    }
+
+    public static function scheduler(): Schedule
+    {
+        app()->singleton(Schedule::class, function ($app) {
+            $config = app('config');
+
+            $tz = $config->get('app.schedule_timezone', $config->get('app.timezone', 'Europe/Paris'));
+
+            return (new Schedule($tz))->useCache($_ENV['SCHEDULE_CACHE_DRIVER'] ?? null);
+        });
+
+        return app()->make(Schedule::class);
+    }
+
+    public static function log(?string $message = null, $concern = null, string $type = 'info'): ?array
+    {
+        $logs = static::get('__core__logs', []);
+
+        if (null !== $message) {
+            $date = date('Y-m-d H:i:s');
+
+            $logs[] = compact('date', 'type', 'message', 'concern');
+
+            static::set('__core__logs', $logs);
+
+            return null;
+        }
+
+        return $logs;
+    }
+
+    public static function loader(string $namespace = 'core'): Lazy
+    {
+        return Lazy::getInstance($namespace);
+    }
+
+    public static function load(string $key, string $namespace = 'core')
+    {
+        return Lazy::getInstance($namespace)[$key];
     }
 
     public static function lazy(callable $callback): Closure
@@ -1871,9 +1912,26 @@ value="'.static::getToken().'"
         return $code;
     }
 
-    public static function getClosureId(Closure $callable)
+    public static function getClosureId(Closure $callable): string
     {
         return sha1(static::getReflectedCode(new ReflectionFunction($callable)));
+    }
+
+    public static function jsonDecode(string $concern, $default = [], bool $toArray = true)
+    {
+        return json_decode($concern, $toArray) ?: $default;
+    }
+
+    public static function typensense(?array $config = null): Typesense
+    {
+        return new Typesense(static::typensenseClient($config));
+    }
+
+    public static function typensenseClient(?array $config = null): \Typesense\Client
+    {
+        $conf = $config ?? config('modeler.typesense', []);
+
+        return new \Typesense\Client($conf);
     }
 
     public static function callIn(object $object, string $method, ...$parameters)
@@ -1901,10 +1959,17 @@ value="'.static::getToken().'"
         });
 
         $finder = new FileViewFinder(app('files'), $paths);
-        $factory = new viewFactory($resolver, $finder, app('fileventses'));
+        $factory = new viewFactory($resolver, $finder, app('events'));
         $factory->addExtension('php', 'php');
 
         return $factory;
+    }
+
+    public static function isEnv(string $env)
+    {
+        $env = Str::upper($env);
+
+        return env('APP_ENV', 'production') === constant("Morbihanet\\Modeler\\Constants::ENV_$env");
     }
 
     public static function __callStatic(string $name, array $arguments)

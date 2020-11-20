@@ -76,7 +76,11 @@ class Store extends Db
      */
     public function commit()
     {
-        return $this->getPdo()->commit();
+        $this->fire('commiting', $this);
+        $status = $this->getPdo()->commit();
+        $this->fire('commited', $this);
+
+        return $status;
     }
 
     /**
@@ -84,7 +88,11 @@ class Store extends Db
      */
     public function rollback()
     {
-        return $this->getPdo()->rollback();
+        $this->fire('rollingback', $this);
+        $status = $this->getPdo()->rollback();
+        $this->fire('rolledback', $this);
+
+        return $status;
     }
 
     /**
@@ -121,6 +129,7 @@ class Store extends Db
     public function count()
     {
         return $this->__store->select('v')
+            ->where('e', 0)
             ->where('k', 'like', $this->__store->getNamespace() . '.row.%')
             ->count();
     }
@@ -192,9 +201,9 @@ class Store extends Db
      */
     public function flush()
     {
-        $this->__store->where('k', 'like', $this->__store->getNamespace() . '.%')->delete();
+        $this->__store->where('e', 0)->where('k', 'like', $this->__store->getNamespace() . '.%')->delete();
 
-        return 0 === $this->__store->where('k', 'like', $this->__store->getNamespace() . '.%')->count();
+        return 0 === $this->__store->where('e', 0)->where('k', 'like', $this->__store->getNamespace() . '.%')->count();
     }
 
     /**
@@ -205,12 +214,14 @@ class Store extends Db
         $min = date('Y-m-d H:i:s', time() - config('modeler.cache_ttl', 24 * 3600));
 
         $this->__store
+            ->where('e', 0)
             ->where('k', 'like', $this->__store->getNamespace() . '.q.%')
             ->where('called_at', '<=', $min)
             ->delete()
         ;
 
         return 0 === $this->__store
+                ->where('e', 0)
                 ->where('k', 'like', $this->__store->getNamespace() . '.q.%')
                 ->where('called_at', '<=', $min)
                 ->count()
@@ -311,6 +322,7 @@ class Store extends Db
         $db = function () use ($store, $key, $value) {
             foreach ($store
                          ->select('v')
+                         ->where('e', 0)
                          ->where('k', 'like', $store->getNamespace() . '.row.%')
                          ->where('v', 'like', 'a%s:'.strlen($key).':"'.$key.'";%'.addslashes($value).'%')
                          ->cursor() as $row

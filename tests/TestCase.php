@@ -135,6 +135,17 @@ abstract class TestCase extends Orchestra
             'bearer_store' => Store::class,
             'modeler_store' => Store::class,
             'scheduler_route' => '/modeler/scheduler/cron',
+            'typesense'             => [
+                'api_key' => 'morbihanet',
+                'nodes' => [
+                    [
+                        'host' => 'typesense',
+                        'port' => '8108',
+                        'protocol' => 'http',
+                    ],
+                ],
+                'connection_timeout_seconds' => 2,
+            ],
         ]);
     }
 

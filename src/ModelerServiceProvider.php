@@ -1,6 +1,7 @@
 <?php
 namespace Morbihanet\Modeler;
 
+use Validator;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Route;
@@ -47,6 +48,22 @@ class ModelerServiceProvider extends ServiceProvider
         Artisan::command('modeler:seed', function () {
             (new Seeder)->run();
         })->describe('Run Modeler seeds');
+
+        $check = function ($attr, $value, $params) {
+            return datum(current($params))->where(end($params), $value)->first() !== null;
+        };
+
+        Validator::extend(
+            'datum_exists', $check, 'The :attribute does not exist.'
+        );
+
+        $check = function ($attr, $value, $params) {
+            return datum(current($params))->where(end($params), $value)->first() === null;
+        };
+
+        Validator::extend(
+            'datum_not_exists', $check, 'The :attribute ever exists.'
+        );
     }
 
     private function registerMigrations()

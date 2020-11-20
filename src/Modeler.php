@@ -18,6 +18,7 @@ use Illuminate\Support\Traits\Macroable;
  * @method Item findOrNew($id, array $columns = [])
  * @method Item updateOrCreate($attributes, array $values = [])
  * @method Iterator customize(callable $callable)
+ * @method Iterator nested(callable $callable)
  * @method Iterator notIn(string $column, array $values)
  * @method Iterator in(string $column, array $values)
  * @method Iterator orNotIn(string $column, array $values)

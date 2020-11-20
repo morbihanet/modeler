@@ -11,15 +11,15 @@ class Context implements ArrayAccess
         Macroable::__call as macroCall;
     }
 
-    protected array $values   = [];
-    protected string $context = 'core';
+    protected array $__values   = [];
+    protected string $__context = 'core';
 
     protected static array $instances = [];
 
     public function __construct(string $context = 'core', array $attributes = [])
     {
         $this->fill($attributes);
-        $this->context = $context;
+        $this->__context = $context;
 
         static::$instances[$context] = $this;
     }
@@ -35,15 +35,15 @@ class Context implements ArrayAccess
 
     public function merge(array $toMerge): self
     {
-        $this->values = array_merge($this->values, $toMerge);
+        $this->__values = array_merge($this->__values, $toMerge);
 
         return $this;
     }
 
     public function setNx(string $key, $value): self
     {
-        if (!isset($this->values[$key])) {
-            $this->values[$key] = $value;
+        if (!isset($this->__values[$key])) {
+            $this->__values[$key] = $value;
         }
 
         return $this;
@@ -60,12 +60,22 @@ class Context implements ArrayAccess
 
     public function toArray(): array
     {
-        return $this->values;
+        return $this->__values;
+    }
+
+    public function all(): array
+    {
+        return $this->__values;
+    }
+
+    public function values(): array
+    {
+        return $this->__values;
     }
 
     public function toJson(int $option = JSON_PRETTY_PRINT): string
     {
-        return json_encode($this->values, $option);
+        return json_encode($this->__values, $option);
     }
 
     public function __toString(): string
@@ -73,9 +83,9 @@ class Context implements ArrayAccess
         return $this->toJson();
     }
 
-    public function __isset(string $key)
+    public function __isset(string $key): bool
     {
-        return isset($this->values[$key]);
+        return isset($this->__values[$key]);
     }
 
     public function has(string $key): bool
@@ -85,21 +95,21 @@ class Context implements ArrayAccess
 
     public function __get(string $key)
     {
-        $value = $this->values[$key] ?? null;
+        $value = $this->__values[$key] ?? null;
 
         return value($value);
     }
 
     public function get(string $key, $default = null)
     {
-        $value = $this->values[$key] ?? $default;
+        $value = $this->__values[$key] ?? $default;
 
         return value($value);
     }
 
     public function __unset(string $key)
     {
-        unset($this->values[$key]);
+        unset($this->__values[$key]);
     }
 
     public function remove(string $key)
@@ -113,7 +123,7 @@ class Context implements ArrayAccess
 
     public function __set(string $key, $value)
     {
-        $this->values[$key] = $value;
+        $this->__values[$key] = $value;
     }
 
     public function set(string $key, $value)
@@ -145,17 +155,22 @@ class Context implements ArrayAccess
 
     public function getContext(): string
     {
-        return $this->context;
+        return $this->__context;
     }
 
     public function setContext(string $context): Context
     {
-        $this->context = $context;
+        $this->__context = $context;
 
         return $this;
     }
 
-    public function __call(string $name, array $arguments)
+    public static function __callStatic($name, $arguments)
+    {
+        return static::getInstance()->{$name}(...$arguments);
+    }
+
+    public function __call($name, $arguments)
     {
         if (static::hasMacro($name)) {
             return $this->macroCall($name, $arguments);
@@ -174,7 +189,7 @@ class Context implements ArrayAccess
             $field              = Str::lower($uncamelizeMethod);
             $def                = array_shift($arguments);
 
-            return $this[$field] ?? value($def);
+            return value($this[$field]) ?? value($def);
         }
 
         if (substr($name, 0, 3) === 'has' && strlen($name) > 3) {

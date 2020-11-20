@@ -18,4 +18,15 @@ return [
     'scheduler_route'       => '/modeler/scheduler/cron',
     'api_route'             => '/xapi',
     'cookie_name'           => 'app_bearer',
+    'typesense'             => [
+        'api_key' => 'morbihanet',
+        'nodes' => [
+            [
+                'host' => 'typesense',
+                'port' => '8108',
+                'protocol' => 'http',
+            ],
+        ],
+        'connection_timeout_seconds' => 2,
+    ],
 ];
